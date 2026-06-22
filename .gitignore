@@ -1,0 +1,28 @@
+# Virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Database
+db.sqlite3
+
+# Media uploads
+media/
+
+# Collected static files
+staticfiles/
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

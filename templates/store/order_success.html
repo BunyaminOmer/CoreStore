@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load store_tags %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <div class="card bg-white border-0 shadow-sm rounded-4 mx-auto p-5" style="max-width: 600px;">
+        <div class="mb-4">
+            <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success rounded-circle" style="width: 100px; height: 100px;">
+                <i class="bi bi-check-lg" style="font-size: 4rem;"></i>
+            </div>
+        </div>
+        
+        <h2 class="fw-bold mb-3">Siparişiniz Alındı!</h2>
+        <p class="text-muted fs-5 mb-4">Teşekkür ederiz. Siparişiniz başarıyla oluşturuldu ve satıcı(lar)a iletildi.</p>
+        
+        <div class="bg-light rounded-3 p-4 text-start mb-4">
+            <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                <span class="text-muted">Sipariş Numarası:</span>
+                <span class="fw-bold">#{{ order.id }}</span>
+            </div>
+            <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                <span class="text-muted">Sipariş Tarihi:</span>
+                <span class="fw-bold">{{ order.created_at|date:"d.m.Y H:i" }}</span>
+            </div>
+            <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                <span class="text-muted">Durum:</span>
+                <span class="badge bg-warning text-dark">{{ order.get_status_display }}</span>
+            </div>
+            <div class="d-flex justify-content-between pt-2">
+                <span class="fw-bold">Toplam Tutar:</span>
+                <span class="fw-bolder text-primary fs-5">{{ order.total_amount|currency }}</span>
+            </div>
+        </div>
+        
+        <div>
+            <a href="{% url 'accounts:profile' %}" class="btn btn-outline-primary rounded-pill px-4 me-2">Siparişlerimi Gör</a>
+            <a href="{% url 'store:home' %}" class="btn btn-primary rounded-pill px-4">Alışverişe Devam Et</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

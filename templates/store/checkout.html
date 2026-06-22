@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% load store_tags crispy_forms_tags %}
+
+{% block content %}
+<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+
+  <div class="section-header" style="margin-bottom:1.75rem;">
+    <h1 class="section-title">Siparişi Tamamla</h1>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- ── Left: Form ── -->
+    <div class="col-lg-7">
+
+      <!-- Delivery Address -->
+      <div class="checkout-card">
+        <h2 class="checkout-card__title">
+          <i class="bi bi-geo-alt-fill" style="color:var(--primary-light);"></i>
+          Teslimat Bilgileri
+        </h2>
+
+        <form method="POST" id="checkout-form">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+          <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:var(--radius-xs); padding:.85rem 1rem; margin-bottom:1rem; font-size:.875rem; color:var(--danger);">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+          </div>
+          {% endif %}
+
+          <!-- Shipping Address -->
+          <div style="margin-bottom:1rem;">
+            <label class="form-label-custom" for="{{ form.shipping_address.id_for_label }}">
+              Teslimat Adresi
+            </label>
+            <textarea name="{{ form.shipping_address.html_name }}"
+                      id="{{ form.shipping_address.id_for_label }}"
+                      class="form-control-custom {% if form.shipping_address.errors %}is-invalid{% endif %}"
+                      rows="3"
+                      placeholder="Açık teslimat adresinizi giriniz.">{{ form.shipping_address.value|default:'' }}</textarea>
+            {% if form.shipping_address.errors %}
+              <div style="color:var(--danger); font-size:.8rem; margin-top:.3rem;">{{ form.shipping_address.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Phone -->
+          <div style="margin-bottom:1.5rem;">
+            <label class="form-label-custom" for="{{ form.phone.id_for_label }}">
+              Telefon Numarası
+            </label>
+            <input type="text"
+                   name="{{ form.phone.html_name }}"
+                   id="{{ form.phone.id_for_label }}"
+                   class="form-control-custom {% if form.phone.errors %}is-invalid{% endif %}"
+                   value="{{ form.phone.value|default:'' }}"
+                   placeholder="05XX XXX XX XX">
+            {% if form.phone.errors %}
+              <div style="color:var(--danger); font-size:.8rem; margin-top:.3rem;">{{ form.phone.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Note -->
+          <div>
+            <label class="form-label-custom" for="{{ form.note.id_for_label }}">
+              Sipariş Notu <span style="color:var(--text-light); font-weight:400; text-transform:none;">(opsiyonel)</span>
+            </label>
+            <textarea name="{{ form.note.html_name }}"
+                      id="{{ form.note.id_for_label }}"
+                      class="form-control-custom"
+                      rows="2"
+                      placeholder="Siparişinizle ilgili eklemek istedikleriniz">{{ form.note.value|default:'' }}</textarea>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Payment (Simulation) -->
+      <div class="checkout-card">
+        <h2 class="checkout-card__title">
+          <i class="bi bi-credit-card-fill" style="color:var(--primary-light);"></i>
+          Ödeme Bilgileri
+        </h2>
+
+        <div class="payment-demo-notice">
+          <i class="bi bi-info-circle-fill" style="flex-shrink:0; margin-top:1px;"></i>
+          <span>Bu bir demo projesidir. Gerçek ödeme alınmamaktadır. Kart bilgilerini doldurmayın.</span>
+        </div>
+
+        <!-- Card name -->
+        <div style="margin-bottom:1rem;">
+          <label class="form-label-custom">Kart Üzerindeki İsim</label>
+          <input type="text" class="form-control-custom" placeholder="Ad Soyad">
+        </div>
+
+        <!-- Card number -->
+        <div style="margin-bottom:1rem;">
+          <label class="form-label-custom">Kart Numarası</label>
+          <input type="text" class="form-control-custom" placeholder="0000  0000  0000  0000" maxlength="19"
+                 oninput="formatCardNumber(this)">
+        </div>
+
+        <!-- Expiry + CVC -->
+        <div class="card-input-grid">
+          <div>
+            <label class="form-label-custom">Son Kullanma</label>
+            <input type="text" class="form-control-custom" placeholder="AA / YY" maxlength="5"
+                   oninput="formatExpiry(this)">
+          </div>
+          <div>
+            <label class="form-label-custom">CVC</label>
+            <input type="text" class="form-control-custom" placeholder="123" maxlength="3">
+          </div>
+        </div>
+
+        <button type="submit" form="checkout-form" class="btn-place-order">
+          <i class="bi bi-shield-lock-fill"></i>
+          Siparişi Onayla
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ── Right: Summary ── -->
+    <div class="col-lg-5">
+      <div class="order-summary">
+        <p class="order-summary__title">Sipariş Özeti</p>
+
+        <!-- Items list -->
+        <div style="margin-bottom:1rem; padding-bottom:.75rem; border-bottom:1.5px solid var(--border); max-height:300px; overflow-y:auto;">
+          {% for item in cart.items.all %}
+          <div class="checkout-summary-item">
+            {% if item.product.image %}
+              <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
+            {% else %}
+              <div style="width:48px; height:48px; border-radius:var(--radius-xs); background:var(--bg); display:flex; align-items:center; justify-content:center; color:var(--text-light); flex-shrink:0; border:1px solid var(--border);">
+                <i class="bi bi-image"></i>
+              </div>
+            {% endif %}
+            <div style="flex:1; min-width:0;">
+              <div class="checkout-summary-item__name">{{ item.product.name|truncatechars:40 }}</div>
+              <div class="checkout-summary-item__qty">{{ item.quantity }} adet</div>
+            </div>
+            <div class="checkout-summary-item__total">{{ item.line_total|currency }}</div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Totals -->
+        <div class="order-summary__row">
+          <span style="color:var(--text-muted);">Ara Toplam</span>
+          <span style="font-weight:700;">{{ cart.total_price|currency }}</span>
+        </div>
+
+        {% if discount_amount > 0 %}
+        <div class="order-summary__row" style="color:var(--success);">
+          <span>İndirim (Kupon)</span>
+          <span style="font-weight:700;">−{{ discount_amount|currency }}</span>
+        </div>
+        {% endif %}
+
+        <div class="order-summary__row">
+          <span style="color:var(--text-muted);">Kargo</span>
+          <span style="color:var(--success); font-weight:600;">Ücretsiz</span>
+        </div>
+
+        <div class="order-summary__row order-summary__row--total">
+          <span>Ödenecek Tutar</span>
+          <span class="order-summary__total-price">{{ final_total|currency }}</span>
+        </div>
+
+        <!-- Trust badges -->
+        <div style="display:flex; gap:1rem; margin-top:1.25rem; padding-top:1rem; border-top:1.5px solid var(--border);">
+          <div style="text-align:center; flex:1;">
+            <i class="bi bi-shield-check" style="color:var(--success); font-size:1.25rem; display:block; margin-bottom:.25rem;"></i>
+            <span style="font-size:.72rem; color:var(--text-muted); font-weight:600;">Güvenli</span>
+          </div>
+          <div style="text-align:center; flex:1;">
+            <i class="bi bi-truck" style="color:var(--primary-light); font-size:1.25rem; display:block; margin-bottom:.25rem;"></i>
+            <span style="font-size:.72rem; color:var(--text-muted); font-weight:600;">Ücretsiz Kargo</span>
+          </div>
+          <div style="text-align:center; flex:1;">
+            <i class="bi bi-arrow-repeat" style="color:var(--accent); font-size:1.25rem; display:block; margin-bottom:.25rem;"></i>
+            <span style="font-size:.72rem; color:var(--text-muted); font-weight:600;">Kolay İade</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function formatCardNumber(input) {
+    let val = input.value.replace(/\D/g, '').substring(0, 16);
+    input.value = val.replace(/(.{4})/g, '$1  ').trim();
+  }
+
+  function formatExpiry(input) {
+    let val = input.value.replace(/\D/g, '').substring(0, 4);
+    if (val.length >= 3) val = val.slice(0, 2) + ' / ' + val.slice(2);
+    input.value = val;
+  }
+</script>
+{% endblock %}

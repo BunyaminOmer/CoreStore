@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load store_tags %}
+
+{% block content %}
+<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{% url 'store:home' %}">Ana Sayfa</a>
+      </li>
+      {% if product.category %}
+      <li class="breadcrumb-item">
+        <a href="{% url 'store:category' product.category.slug %}">{{ product.category.name }}</a>
+      </li>
+      {% endif %}
+      <li class="breadcrumb-item active" aria-current="page">{{ product.name|truncatechars:40 }}</li>
+    </ol>
+  </nav>
+
+  <!-- Main content -->
+  <div class="row g-4 g-lg-5" style="background:var(--bg-card); border-radius:var(--radius); border:1.5px solid var(--border); padding:1.75rem; margin:0;">
+
+    <!-- ── Image ── -->
+    <div class="col-lg-6">
+      {% if product.image %}
+        <img src="{{ product.image.url }}"
+             alt="{{ product.name }}"
+             class="product-detail-img">
+      {% else %}
+        <div class="product-detail-placeholder">
+          <i class="bi bi-image"></i>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- ── Info ── -->
+    <div class="col-lg-6 d-flex flex-column">
+
+      <!-- Category pill -->
+      {% if product.category %}
+      <div>
+        <a href="{% url 'store:category' product.category.slug %}" class="product-badge-cat">
+          <i class="bi bi-tag-fill me-1"></i>{{ product.category.name }}
+        </a>
+      </div>
+      {% endif %}
+
+      <h1 class="product-title">{{ product.name }}</h1>
+
+      <!-- Vendor -->
+      <a href="#" class="product-vendor-link mb-4">
+        <i class="bi bi-shop"></i>
+        {{ product.vendor.store_name }}
+      </a>
+
+      <!-- Price box -->
+      <div class="product-price-box">
+        {% if product.discount_price %}
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="product-price-old">{{ product.price|currency }}</span>
+            <span class="product-price-main is-sale">{{ product.discount_price|currency }}</span>
+            <span class="product-price-discount-badge">İndirimli</span>
+          </div>
+        {% else %}
+          <span class="product-price-main">{{ product.price|currency }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Stock -->
+      <div class="mb-4">
+        {% if product.stock > 0 %}
+          <span class="product-stock-ok">
+            <i class="bi bi-check-circle-fill"></i>
+            Stokta mevcut — {{ product.stock }} adet
+          </span>
+        {% else %}
+          <span class="product-stock-out">
+            <i class="bi bi-x-circle-fill"></i>
+            Stok tükendi
+          </span>
+        {% endif %}
+      </div>
+
+      <!-- Quantity + Add to cart -->
+      <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <div class="qty-control">
+          <button class="qty-control__btn" type="button" onclick="decreaseQty()" aria-label="Azalt">
+            <i class="bi bi-dash"></i>
+          </button>
+          <input class="qty-control__input"
+                 type="number"
+                 id="product-quantity"
+                 value="1"
+                 min="1"
+                 max="{{ product.stock }}"
+                 {% if product.stock == 0 %}disabled{% endif %}>
+          <button class="qty-control__btn" type="button" onclick="increaseQty()" aria-label="Artır">
+            <i class="bi bi-plus"></i>
+          </button>
+        </div>
+
+        <button class="btn-add-to-cart"
+                id="add-to-cart-btn"
+                onclick="addToCart({{ product.id }}, parseInt(document.getElementById('product-quantity').value))"
+                {% if product.stock == 0 %}disabled{% endif %}>
+          <i class="bi bi-cart-plus fs-5"></i>
+          {% if product.stock == 0 %}Stok Tükendi{% else %}Sepete Ekle{% endif %}
+        </button>
+      </div>
+
+      <!-- Description -->
+      {% if product.description %}
+      <div class="mt-auto pt-4" style="border-top:1.5px solid var(--border);">
+        <h5 style="font-size:.875rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:.75rem;">
+          Ürün Açıklaması
+        </h5>
+        <p style="color:var(--text-muted); line-height:1.8; font-size:.9rem;">
+          {{ product.description|linebreaksbr }}
+        </p>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const maxStock = {{ product.stock }};
+
+  function decreaseQty() {
+    const input = document.getElementById('product-quantity');
+    if (parseInt(input.value) > 1) {
+      input.value = parseInt(input.value) - 1;
+    }
+  }
+
+  function increaseQty() {
+    const input = document.getElementById('product-quantity');
+    if (parseInt(input.value) < maxStock) {
+      input.value = parseInt(input.value) + 1;
+    }
+  }
+</script>
+{% endblock %}

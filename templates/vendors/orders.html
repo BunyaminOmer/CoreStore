@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load store_tags %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <h2 class="fw-bold mb-0">Gelen Siparişler</h2>
+        <a href="{% url 'vendors:dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">Geri Dön</a>
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white rounded-pill shadow-sm p-2 mb-4 d-inline-flex">
+        <a href="{% url 'vendors:orders' %}" class="btn {% if not request.GET.status %}btn-primary text-white{% else %}btn-light{% endif %} rounded-pill px-4 me-2">Tümü</a>
+        <a href="{% url 'vendors:orders' %}?status=preparing" class="btn {% if request.GET.status == 'preparing' %}btn-warning text-dark{% else %}btn-light{% endif %} rounded-pill px-4 me-2">Hazırlanıyor</a>
+        <a href="{% url 'vendors:orders' %}?status=shipped" class="btn {% if request.GET.status == 'shipped' %}btn-info text-dark{% else %}btn-light{% endif %} rounded-pill px-4 me-2">Kargoda</a>
+        <a href="{% url 'vendors:orders' %}?status=delivered" class="btn {% if request.GET.status == 'delivered' %}btn-success text-white{% else %}btn-light{% endif %} rounded-pill px-4">Teslim Edildi</a>
+    </div>
+
+    <div class="bg-white rounded-4 shadow-sm overflow-hidden p-4">
+        {% if order_items %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sipariş No</th>
+                            <th>Müşteri</th>
+                            <th>Ürün</th>
+                            <th>Adet</th>
+                            <th>Tutar</th>
+                            <th>Durum Güncelle</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order_items %}
+                        <tr>
+                            <td>
+                                <span class="fw-bold text-muted">#{{ item.order.id }}</span>
+                                <br><small class="text-muted">{{ item.order.created_at|date:"d.m.Y H:i" }}</small>
+                            </td>
+                            <td>
+                                <span class="fw-bold">{{ item.order.user.first_name }} {{ item.order.user.last_name }}</span>
+                                <br><small class="text-muted">{{ item.order.user.phone }}</small>
+                            </td>
+                            <td>
+                                <a href="{% url 'store:product_detail' item.product.slug %}" class="text-dark text-decoration-none" target="_blank">
+                                    {{ item.product.name|truncatechars:30 }}
+                                </a>
+                            </td>
+                            <td class="text-center"><span class="badge bg-secondary rounded-pill px-3">{{ item.quantity }}</span></td>
+                            <td class="fw-bold text-primary">{{ item.line_total|currency }}</td>
+                            <td>
+                                <form method="POST" action="{% url 'vendors:orders' %}" class="d-flex align-items-center">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="order_id" value="{{ item.order.id }}">
+                                    <select name="status" class="form-select form-select-sm shadow-sm me-2" style="width: 140px;">
+                                        <option value="preparing" {% if item.order.status == 'preparing' %}selected{% endif %}>Hazırlanıyor</option>
+                                        <option value="shipped" {% if item.order.status == 'shipped' %}selected{% endif %}>Kargoda</option>
+                                        <option value="delivered" {% if item.order.status == 'delivered' %}selected{% endif %}>Teslim Edildi</option>
+                                        <option value="cancelled" {% if item.order.status == 'cancelled' %}selected{% endif %}>İptal</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-primary rounded-circle shadow-sm" title="Güncelle">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-receipt text-muted mb-3" style="font-size: 4rem;"></i>
+                <h4 class="text-muted">Bu filtreye uygun sipariş bulunmuyor.</h4>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

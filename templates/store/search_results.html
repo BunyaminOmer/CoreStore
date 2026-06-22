@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load store_tags %}
+
+{% block content %}
+<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header__icon">
+            <i class="bi bi-search"></i>
+        </div>
+        <div>
+            <h1 class="page-header__title">
+                "{{ query }}" için sonuçlar
+            </h1>
+            <p class="page-header__desc">
+                {% if products %}
+                {{ products|length }} ürün bulundu
+                {% else %}
+                Sonuç bulunamadı
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="row g-4">
+        {% for product in products %}
+        <div class="col-lg-3 col-md-4 col-sm-6 fade-in-up" style="animation-delay:{{ forloop.counter0 }}0ms">
+            <div class="product-card">
+
+                {% if product.discount_price %}
+                <span class="sale-badge">İndirim</span>
+                {% endif %}
+
+                <div class="product-card__img">
+                    {% if product.image %}
+                    <a href="{% url 'store:product_detail' product.slug %}">
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                    </a>
+                    {% else %}
+                    <a href="{% url 'store:product_detail' product.slug %}" class="product-card__img-placeholder">
+                        <i class="bi bi-image"></i>
+                    </a>
+                    {% endif %}
+
+                    <div class="product-card__overlay">
+                        <button class="product-card__quick-add" onclick="addToCart({{ product.id }})">
+                            <i class="bi bi-cart-plus"></i>
+                            Hızlı Ekle
+                        </button>
+                    </div>
+                </div>
+
+                <div class="product-card__body">
+                    <div class="product-card__vendor">
+                        <i class="bi bi-shop"></i>
+                        {{ product.vendor.store_name }}
+                    </div>
+
+                    <a href="{% url 'store:product_detail' product.slug %}" class="product-card__name">
+                        {{ product.name }}
+                    </a>
+
+                    <div class="product-card__price-row">
+                        {% if product.discount_price %}
+                        <span class="product-card__price product-card__price--sale">{{ product.discount_price|currency
+                            }}</span>
+                        <span class="product-card__old-price">{{ product.price|currency }}</span>
+                        {% else %}
+                        <span class="product-card__price">{{ product.price|currency }}</span>
+                        {% endif %}
+                    </div>
+
+                    <button class="product-card__add-btn" onclick="addToCart({{ product.id }})">
+                        <i class="bi bi-cart-plus"></i>
+                        Sepete Ekle
+                    </button>
+                </div>
+
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="empty-state">
+                <i class="bi bi-search empty-state__icon"></i>
+                <p class="empty-state__title">Arama sonucu bulunamadı.</p>
+                <p class="empty-state__text">
+                    "{{ query }}" için eşleşen ürün yok. Farklı anahtar kelimeler deneyin.
+                </p>
+                <a href="{% url 'store:home' %}" class="btn-primary-custom mt-3">
+                    <i class="bi bi-house"></i>
+                    Ana Sayfaya Dön
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

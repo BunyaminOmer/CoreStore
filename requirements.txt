@@ -1,0 +1,16 @@
+Django>=4.2,<5.0
+Pillow
+openpyxl
+django-crispy-forms
+crispy-bootstrap5
+
+# Deployment
+gunicorn>=21.2.0
+whitenoise[broti]>=6.6.0
+dj-database-url>=2.1.0
+psycopg2-binary>=2.9.9
+python-dotenv>=1.0.1
+
+# Cloudinary (Media files)
+cloudinary>=1.39.0
+django-cloudinary-storage>=0.3.0

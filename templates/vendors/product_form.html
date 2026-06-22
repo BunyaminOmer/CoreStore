@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                <h2 class="fw-bold mb-0 text-primary">{% if product %}Ürünü Düzenle{% else %}Yeni Ürün Ekle{% endif %}</h2>
+                <a href="{% url 'vendors:product_list' %}" class="btn btn-outline-secondary rounded-pill px-4">İptal</a>
+            </div>
+
+            {% if form.errors %}
+            <div class="alert alert-danger rounded-4 shadow-sm mb-4">
+                Lütfen formdaki hataları düzeltin.
+            </div>
+            {% endif %}
+
+            <div class="card bg-white border-custom shadow-sm rounded-4">
+                <div class="card-body p-4 p-md-5">
+                    {% if product and product.image %}
+                        <div class="text-center mb-4 pb-4 border-bottom">
+                            <img src="{{ product.image.url }}" alt="Mevcut Görsel" class="rounded-4 shadow-sm mb-3" style="width: 200px; height: 200px; object-fit: cover;">
+                            <h6 class="text-muted fw-bold mb-0">Mevcut Ürün Görseli</h6>
+                        </div>
+                    {% endif %}
+
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.name.id_for_label }}" class="form-label fw-bold">Ürün Adı <span class="text-danger">*</span></label>
+                            <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" class="form-control form-control-lg {% if form.name.errors %}is-invalid{% endif %}" value="{{ form.name.value|default:'' }}" required>
+                            {% if form.name.errors %}<div class="invalid-feedback">{{ form.name.errors|join:", " }}</div>{% endif %}
+                        </div>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.category.id_for_label }}" class="form-label fw-bold">Kategori <span class="text-danger">*</span></label>
+                                <select name="{{ form.category.name }}" id="{{ form.category.id_for_label }}" class="form-select form-select-lg {% if form.category.errors %}is-invalid{% endif %}">
+                                    {% for choice in form.category.field.choices %}
+                                        <option value="{{ choice.0 }}" {% if form.category.value|stringformat:"s" == choice.0|stringformat:"s" %}selected{% endif %}>{{ choice.1 }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.category.errors %}<div class="invalid-feedback">{{ form.category.errors|join:", " }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="{{ form.image.id_for_label }}" class="form-label fw-bold">Ürün Görseli</label>
+                                <input type="file" name="{{ form.image.name }}" id="{{ form.image.id_for_label }}" class="form-control form-control-lg {% if form.image.errors %}is-invalid{% endif %}" accept="image/*">
+                                {% if form.image.errors %}<div class="invalid-feedback">{{ form.image.errors|join:", " }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-4">
+                                <label for="{{ form.price.id_for_label }}" class="form-label fw-bold">Satış Fiyatı (₺) <span class="text-danger">*</span></label>
+                                <input type="number" name="{{ form.price.name }}" id="{{ form.price.id_for_label }}" step="0.01" class="form-control form-control-lg {% if form.price.errors %}is-invalid{% endif %}" value="{{ form.price.value|default:'' }}" required>
+                                {% if form.price.errors %}<div class="invalid-feedback">{{ form.price.errors|join:", " }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="{{ form.discount_price.id_for_label }}" class="form-label fw-bold">İndirimli Fiyat (₺)</label>
+                                <input type="number" name="{{ form.discount_price.name }}" id="{{ form.discount_price.id_for_label }}" step="0.01" class="form-control form-control-lg {% if form.discount_price.errors %}is-invalid{% endif %}" value="{{ form.discount_price.value|default:'' }}">
+                                <div class="form-text">İsteğe bağlı.</div>
+                                {% if form.discount_price.errors %}<div class="invalid-feedback">{{ form.discount_price.errors|join:", " }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="{{ form.stock.id_for_label }}" class="form-label fw-bold">Stok Adedi <span class="text-danger">*</span></label>
+                                <input type="number" name="{{ form.stock.name }}" id="{{ form.stock.id_for_label }}" class="form-control form-control-lg {% if form.stock.errors %}is-invalid{% endif %}" value="{{ form.stock.value|default:'0' }}" required>
+                                {% if form.stock.errors %}<div class="invalid-feedback">{{ form.stock.errors|join:", " }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.description.id_for_label }}" class="form-label fw-bold">Ürün Açıklaması</label>
+                            <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" rows="5" class="form-control {% if form.description.errors %}is-invalid{% endif %}">{{ form.description.value|default:'' }}</textarea>
+                            {% if form.description.errors %}<div class="invalid-feedback">{{ form.description.errors|join:", " }}</div>{% endif %}
+                        </div>
+
+                        <div class="mb-5">
+                            <div class="form-check form-switch fs-5">
+                                <input class="form-check-input" type="checkbox" role="switch" name="{{ form.is_active.name }}" id="{{ form.is_active.id_for_label }}" {% if form.is_active.value %}checked{% endif %}>
+                                <label class="form-check-label fw-bold" for="{{ form.is_active.id_for_label }}">Ürünü Satışa Aç (Aktif)</label>
+                            </div>
+                            <div class="form-text ms-1 mt-1">Bu seçeneği kapatırsanız ürün mağazanızda görünmez. (Not: Ürünler ayrıca sistem onayı gerektirir.)</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-accent w-100 py-3 rounded-pill fw-bold shadow-sm fs-5">
+                            <i class="bi bi-check2-circle me-2"></i>{% if product %}Değişiklikleri Kaydet{% else %}Ürünü Yükle{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

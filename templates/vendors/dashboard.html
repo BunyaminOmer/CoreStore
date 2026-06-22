@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+{% load store_tags %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var ctx = document.getElementById('salesChart').getContext('2d');
+        var salesLabels = JSON.parse('{{ sales_labels|safe }}');
+        var salesData = JSON.parse('{{ sales_data|safe }}');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: salesLabels,
+                datasets: [{
+                    label: 'Satış Hacmi (₺)',
+                    data: salesData,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#f59e0b',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { borderDash: [4, 4], color: '#e2e8f0' },
+                        ticks: {
+                            callback: function(value) { return '₺' + value; }
+                        }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    
+    <!-- Header Gradient -->
+    <div class="vendor-header-gradient fade-in-up">
+        <div class="row align-items-center position-relative z-1">
+            <div class="col-md-8">
+                <span class="badge bg-white text-primary mb-2 px-3 py-2 rounded-pill"><i class="bi bi-patch-check-fill text-accent me-1"></i> Onaylı Satıcı</span>
+                <h1 class="fw-bold mb-1">{{ vendor.store_name }}</h1>
+                <p class="mb-0 opacity-75">Mağaza Yönetim Paneline Hoş Geldiniz.</p>
+            </div>
+            <div class="col-md-4 text-md-end mt-4 mt-md-0">
+                <a href="{% url 'vendors:product_add' %}" class="btn btn-light text-primary rounded-pill px-4 py-2 fw-bold shadow-sm">
+                    <i class="bi bi-plus-lg me-2"></i>Yeni Ürün Ekle
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row g-4 mb-5 fade-in-up stagger-1">
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap kpi-blue">
+                    <i class="bi bi-box-seam"></i>
+                </div>
+                <div>
+                    <div class="kpi-label">Toplam Ürün</div>
+                    <div class="kpi-value">{{ product_count }}<span class="fs-6 text-muted fw-normal ms-1">/ {{ vendor.product_limit }}</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap kpi-orange">
+                    <i class="bi bi-cart-check"></i>
+                </div>
+                <div>
+                    <div class="kpi-label">Aktif Siparişler</div>
+                    <div class="kpi-value">{{ active_orders_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap kpi-green">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+                <div>
+                    <div class="kpi-label">Toplam Ciro</div>
+                    <div class="kpi-value">{{ total_sales|currency }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap kpi-purple">
+                    <i class="bi bi-star"></i>
+                </div>
+                <div>
+                    <div class="kpi-label">Satıcı Puanı</div>
+                    <div class="kpi-value">5.0<span class="fs-6 text-muted fw-normal ms-1">/ 5</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 fade-in-up stagger-2">
+        <!-- Chart -->
+        <div class="col-lg-8">
+            <div class="chart-container d-flex flex-column">
+                <h5 class="fw-bold mb-4">Son 7 Günlük Satış Hacmi</h5>
+                <div style="flex: 1; min-height: 300px;">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Low Stock Alerts -->
+        <div class="col-lg-4">
+            <div class="alert-panel">
+                <h5 class="alert-panel-title">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Düşük Stok Uyarısı
+                </h5>
+                <p class="text-danger small mb-3">Stok adedi 5'in altında olan ürünleriniz listelenmektedir. Müşteri kaybı yaşamamak için stoklarınızı güncelleyin.</p>
+                
+                {% if low_stock_products %}
+                    {% for item in low_stock_products %}
+                    <div class="low-stock-item">
+                        <div>
+                            <a href="{% url 'store:product_detail' item.slug %}" class="fw-bold text-dark text-decoration-none" target="_blank">{{ item.name|truncatechars:25 }}</a>
+                            <div class="small text-muted">{{ item.price|currency }}</div>
+                        </div>
+                        <span class="badge bg-danger rounded-pill px-3">{{ item.stock }} Adet Kaldı</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-check-circle text-success fs-1 mb-2"></i>
+                        <p class="text-success fw-bold mb-0">Tüm stoklarınız yeterli seviyede.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions & Recent Orders -->
+    <div class="row g-4 mt-1 fade-in-up stagger-3">
+        <div class="col-lg-4">
+            <div class="bg-white rounded-4 shadow-sm p-4 h-100 border border-custom">
+                <h5 class="fw-bold mb-4">Hızlı İşlemler</h5>
+                <div class="d-grid gap-3">
+                    <a href="{% url 'vendors:product_list' %}" class="btn btn-light py-3 text-start border shadow-sm rounded-3">
+                        <i class="bi bi-list-ul text-primary fs-5 me-3 align-middle"></i> <span class="fw-bold text-dark">Ürünlerimi Yönet</span>
+                    </a>
+                    <a href="{% url 'vendors:orders' %}" class="btn btn-light py-3 text-start border shadow-sm rounded-3">
+                        <i class="bi bi-receipt text-success fs-5 me-3 align-middle"></i> <span class="fw-bold text-dark">Gelen Siparişler</span>
+                    </a>
+                    <a href="{% url 'vendors:bulk_upload' %}" class="btn btn-light py-3 text-start border shadow-sm rounded-3">
+                        <i class="bi bi-cloud-arrow-up text-info fs-5 me-3 align-middle"></i> <span class="fw-bold text-dark">Toplu Yükle (Excel)</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-8">
+            <div class="bg-white rounded-4 shadow-sm p-4 h-100 overflow-hidden border border-custom">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0">Son Siparişler</h5>
+                    <a href="{% url 'vendors:orders' %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">Tümünü Gör</a>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sipariş</th>
+                                <th>Ürün</th>
+                                <th>Adet</th>
+                                <th>Tutar</th>
+                                <th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in recent_orders %}
+                            <tr>
+                                <td>
+                                    <span class="fw-bold text-dark">#{{ item.order.id }}</span>
+                                    <br><small class="text-muted">{{ item.order.created_at|date:"d M H:i" }}</small>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if item.product.image %}
+                                        <img src="{{ item.product.image.url }}" class="rounded me-2" style="width: 32px; height: 32px; object-fit: cover;">
+                                        {% endif %}
+                                        <span class="fw-bold text-dark">{{ item.product.name|truncatechars:30 }}</span>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-secondary rounded-pill">{{ item.quantity }}</span></td>
+                                <td class="fw-bold text-primary">{{ item.line_total|currency }}</td>
+                                <td>
+                                    {% if item.order.status == 'pending' %}<span class="badge bg-secondary">Beklemede</span>
+                                    {% elif item.order.status == 'confirmed' %}<span class="badge bg-info text-dark">Onaylandı</span>
+                                    {% elif item.order.status == 'preparing' %}<span class="badge bg-warning text-dark">Hazırlanıyor</span>
+                                    {% elif item.order.status == 'shipped' %}<span class="badge bg-primary">Kargoda</span>
+                                    {% elif item.order.status == 'delivered' %}<span class="badge bg-success">Teslim Edildi</span>
+                                    {% elif item.order.status == 'cancelled' %}<span class="badge bg-danger">İptal Edildi</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <i class="bi bi-receipt text-muted fs-1 mb-2 d-block"></i>
+                                    <span class="text-muted">Henüz siparişiniz bulunmuyor.</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
