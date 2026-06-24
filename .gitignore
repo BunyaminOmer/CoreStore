@@ -13,7 +13,7 @@ db.sqlite3
 media/
 
 # Collected static files
-staticfiles/
+# staticfiles/ (Vercel için açıldı)
 
 # Environment variables
 .env
