@@ -24,7 +24,7 @@ DOMAIN = os.environ.get('DOMAIN')
 if DEBUG:
     ALLOWED_HOSTS = ['*']
 else:
-    ALLOWED_HOSTS = [DOMAIN, f'www.{DOMAIN}', '.onrender.com', '.up.railway.app'] if DOMAIN else ['.onrender.com', '.up.railway.app']
+    ALLOWED_HOSTS = [DOMAIN, f'www.{DOMAIN}', '.onrender.com', '.up.railway.app', '.vercel.app'] if DOMAIN else ['.onrender.com', '.up.railway.app', '.vercel.app']
 
 # GoDaddy / Custom Domain CSRF protection
 if DOMAIN:
