@@ -4,7 +4,10 @@ Django settings for corelogic project.
 
 import os
 from pathlib import Path
+from typing import List, Optional
+
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -13,22 +16,94 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables from .env file if it exists
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
+
+def env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def env_int(name: str, default: int = 0) -> int:
+    value = os.environ.get(name)
+    if value is None or value.strip() == '':
+        return default
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise ImproperlyConfigured(f'{name} must be an integer.') from exc
+
+
+def env_list(name: str) -> List[str]:
+    value = os.environ.get(name, '')
+    return [item.strip() for item in value.split(',') if item.strip()]
+
+
+def clean_host(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    host = value.strip().removeprefix('https://').removeprefix('http://')
+    return host.strip('/').split('/')[0] or None
+
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-x7$k9m#q2v!p8w@f3j6n+r5t0y&c4b=e1h_d*a(g)s%u^l')
+DEBUG = env_bool('DEBUG', default=False)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-local-development-only-change-me'
+    else:
+        raise ImproperlyConfigured('SECRET_KEY must be set when DEBUG=False.')
 
-# Allow specific domain if provided, otherwise allow local
-DOMAIN = os.environ.get('DOMAIN')
-if DEBUG:
-    ALLOWED_HOSTS = ['*']
-else:
-    ALLOWED_HOSTS = [DOMAIN, f'www.{DOMAIN}', '.onrender.com', '.up.railway.app', '.vercel.app'] if DOMAIN else ['.onrender.com', '.up.railway.app', '.vercel.app']
-
-# GoDaddy / Custom Domain CSRF protection
+# GoDaddy / custom domain. Use the plain domain only, e.g. example.com.
+DOMAIN = clean_host(os.environ.get('DOMAIN'))
+CUSTOM_DOMAIN_HOSTS = []
 if DOMAIN:
-    CSRF_TRUSTED_ORIGINS = [f'https://{DOMAIN}', f'https://www.{DOMAIN}']
+    CUSTOM_DOMAIN_HOSTS.append(DOMAIN)
+    if DOMAIN.startswith('www.'):
+        CUSTOM_DOMAIN_HOSTS.append(DOMAIN.removeprefix('www.'))
+    else:
+        CUSTOM_DOMAIN_HOSTS.append(f'www.{DOMAIN}')
+
+PLATFORM_HOSTS = [
+    '.onrender.com',
+    '.up.railway.app',
+    '.vercel.app',
+]
+
+render_hostname = clean_host(os.environ.get('RENDER_EXTERNAL_HOSTNAME'))
+if render_hostname:
+    PLATFORM_HOSTS.append(render_hostname)
+
+LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+if DEBUG:
+    ALLOWED_HOSTS = LOCAL_HOSTS + CUSTOM_DOMAIN_HOSTS + env_list('ALLOWED_HOSTS')
+else:
+    ALLOWED_HOSTS = CUSTOM_DOMAIN_HOSTS + PLATFORM_HOSTS + env_list('ALLOWED_HOSTS')
+
+ALLOWED_HOSTS = list(dict.fromkeys(host for host in ALLOWED_HOSTS if host))
+
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
+for host in CUSTOM_DOMAIN_HOSTS:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{host}')
+CSRF_TRUSTED_ORIGINS.extend([
+    'https://*.onrender.com',
+    'https://*.up.railway.app',
+    'https://*.vercel.app',
+])
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(CSRF_TRUSTED_ORIGINS))
+
+# Production security. Render terminates TLS before requests reach Django.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', default=not DEBUG)
+SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', default=not DEBUG)
+CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', default=not DEBUG)
+SECURE_HSTS_SECONDS = env_int('SECURE_HSTS_SECONDS', default=0 if DEBUG else 3600)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=False)
+SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', default=False)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+REFERRER_POLICY = 'same-origin'
 
 
 # Application definition
@@ -91,9 +166,13 @@ WSGI_APPLICATION = 'corelogic.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if not DEBUG and not DATABASE_URL:
+    raise ImproperlyConfigured('DATABASE_URL must be set when DEBUG=False.')
+
 DATABASES = {
     'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        default=DATABASE_URL or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
         conn_max_age=600,
         conn_health_checks=True,
     )
@@ -146,14 +225,29 @@ if not DEBUG:
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Cloudinary Configuration (if credentials exist)
-if os.environ.get('CLOUDINARY_CLOUD_NAME'):
+# Cloudinary Configuration (required for uploaded media in production)
+CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
+CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY')
+CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET')
+cloudinary_values = [CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET]
+REQUIRE_CLOUDINARY = env_bool('REQUIRE_CLOUDINARY', default=not DEBUG)
+
+if all(cloudinary_values):
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
     CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
-        'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
-        'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
+        'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
+        'API_KEY': CLOUDINARY_API_KEY,
+        'API_SECRET': CLOUDINARY_API_SECRET,
     }
+elif any(cloudinary_values):
+    raise ImproperlyConfigured(
+        'CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET '
+        'must be set together.'
+    )
+elif REQUIRE_CLOUDINARY:
+    raise ImproperlyConfigured(
+        'Cloudinary credentials must be set when REQUIRE_CLOUDINARY=True.'
+    )
 
 
 # Default primary key field type
