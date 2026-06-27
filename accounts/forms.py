@@ -5,7 +5,7 @@ from .models import CustomUser
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = CustomUser
-        fields = ('username', 'email', 'first_name', 'last_name')
+        fields = ('username', 'email', 'first_name', 'last_name', 'phone')
         
     def clean_email(self):
         email = self.cleaned_data.get('email')
@@ -27,3 +27,24 @@ class ProfileUpdateForm(forms.ModelForm):
         widgets = {
             'address': forms.Textarea(attrs={'rows': 3}),
         }
+
+
+class EmailTwoFactorForm(forms.Form):
+    code = forms.CharField(
+        label='Doğrulama Kodu',
+        min_length=6,
+        max_length=6,
+        widget=forms.TextInput(attrs={
+            'autocomplete': 'one-time-code',
+            'inputmode': 'numeric',
+            'pattern': '[0-9]*',
+            'placeholder': '000000',
+            'class': 'text-center fw-bold',
+        }),
+    )
+
+    def clean_code(self):
+        code = self.cleaned_data['code'].strip()
+        if not code.isdigit():
+            raise forms.ValidationError('Kod yalnızca rakamlardan oluşmalıdır.')
+        return code

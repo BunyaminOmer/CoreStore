@@ -215,7 +215,6 @@
                                 <td>
                                     {% if item.order.status == 'pending' %}<span class="badge bg-secondary">Beklemede</span>
                                     {% elif item.order.status == 'confirmed' %}<span class="badge bg-info text-dark">Onaylandı</span>
-                                    {% elif item.order.status == 'preparing' %}<span class="badge bg-warning text-dark">Hazırlanıyor</span>
                                     {% elif item.order.status == 'shipped' %}<span class="badge bg-primary">Kargoda</span>
                                     {% elif item.order.status == 'delivered' %}<span class="badge bg-success">Teslim Edildi</span>
                                     {% elif item.order.status == 'cancelled' %}<span class="badge bg-danger">İptal Edildi</span>

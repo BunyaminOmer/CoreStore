@@ -26,10 +26,75 @@
                 <span class="text-muted">Durum:</span>
                 <span class="badge bg-warning text-dark">{{ order.get_status_display }}</span>
             </div>
+            <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                <span class="text-muted">Ödeme:</span>
+                <span class="fw-bold">
+                    {% if order.installment_count > 1 %}
+                        {{ order.installment_card_group_name }} / {{ order.installment_count }} x {{ order.installment_monthly_amount|currency }}
+                    {% else %}
+                        Tek çekim
+                    {% endif %}
+                </span>
+            </div>
             <div class="d-flex justify-content-between pt-2">
                 <span class="fw-bold">Toplam Tutar:</span>
                 <span class="fw-bolder text-primary fs-5">{{ order.total_amount|currency }}</span>
             </div>
+        </div>
+
+        <div class="bg-light rounded-3 p-4 text-start mb-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Fatura ve Bilgilendirme</h5>
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <span class="text-muted small d-block">Fatura Tipi</span>
+                    <span class="fw-bold">{{ order.get_billing_type_display }}</span>
+                </div>
+                <div class="col-sm-6">
+                    <span class="text-muted small d-block">Bilgilendirme Telefonu</span>
+                    <span class="fw-bold">{{ order.phone }}</span>
+                </div>
+                <div class="col-12">
+                    <span class="text-muted small d-block">Sipariş Linki</span>
+                    <a href="{% url 'store:order_info' order.public_token %}" class="fw-bold text-decoration-none">Sipariş bilgilendirme sayfasını aç</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white border rounded-3 p-4 text-start mb-4">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success rounded-3" style="width: 48px; height: 48px;">
+                    <i class="bi bi-truck fs-4"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-1">CoreJet Kargo Takibi</h5>
+                    <p class="text-muted small mb-0">Kargo hareketleri güncellendikçe bu numara ile takip edebilirsiniz.</p>
+                </div>
+            </div>
+
+            {% if order.shipment %}
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <span class="text-muted small d-block">Takip Numarası</span>
+                    <span class="fw-bold text-primary">{{ order.shipment.tracking_number }}</span>
+                </div>
+                <div class="col-sm-6">
+                    <span class="text-muted small d-block">Kargo Durumu</span>
+                    <span class="fw-bold">{{ order.shipment.get_status_display }}</span>
+                </div>
+                <div class="col-12">
+                    <span class="text-muted small d-block">Mevcut İstasyon</span>
+                    <span class="fw-bold">
+                        {% if order.shipment.current_station %}
+                            {{ order.shipment.current_station.name }}
+                        {% else %}
+                            CoreJet çıkış hazırlığı
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">Kargo kaydı hazırlanıyor.</p>
+            {% endif %}
         </div>
         
         <div>

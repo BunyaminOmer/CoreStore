@@ -1,8 +1,12 @@
 {% extends 'base.html' %}
-{% load store_tags %}
+{% load static store_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/customer_checkout.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+<div class="container commerce-page" style="padding-top:2rem; padding-bottom:3rem;">
 
     <div class="section-header" style="margin-bottom:1.5rem;">
         <h1 class="section-title">Sepetim</h1>
@@ -32,8 +36,7 @@
         <div class="col-lg-8">
 
             <!-- Table -->
-            <div
-                style="background:var(--bg-card); border-radius:var(--radius); border:1.5px solid var(--border); overflow:hidden;">
+            <div class="commerce-card commerce-card--table">
                 <div class="table-responsive">
                     <table class="cart-table w-100" style="border-collapse:collapse;">
                         <thead>
@@ -53,7 +56,11 @@
                                     <div style="display:flex; align-items:center; gap:.85rem;">
                                         {% if item.product.image %}
                                         <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}"
-                                            class="cart-item-img">
+                                            class="cart-item-img"
+                                            onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                                        <div class="cart-item-img-placeholder" hidden>
+                                            <i class="bi bi-image"></i>
+                                        </div>
                                         {% else %}
                                         <div class="cart-item-img-placeholder">
                                             <i class="bi bi-image"></i>
@@ -205,8 +212,13 @@
                             document.getElementById('line-total-' + itemId).textContent = fmt.format(data.item_subtotal);
                         }
                     }
+                    const fmt = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' });
+                    if (data.cart_total !== undefined) {
+                        document.getElementById('summary-subtotal').textContent = fmt.format(data.cart_total);
+                        document.getElementById('summary-total').textContent = fmt.format(data.cart_total);
+                    }
                     if (data.cart_count !== undefined) {
-                        const badge = document.querySelector('.cart-badge');
+                        const badge = document.getElementById('cart-badge');
                         if (badge) badge.textContent = data.cart_count;
                     }
                     showToast('Sepet güncellendi.', 'success');
@@ -227,8 +239,13 @@
             .then(data => {
                 if (data.status === 'success') {
                     document.getElementById('cart-row-' + itemId)?.remove();
-                    const badge = document.querySelector('.cart-badge');
+                    const fmt = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' });
+                    const badge = document.getElementById('cart-badge');
                     if (badge) badge.textContent = data.cart_count;
+                    if (data.cart_total !== undefined) {
+                        document.getElementById('summary-subtotal').textContent = fmt.format(data.cart_total);
+                        document.getElementById('summary-total').textContent = fmt.format(data.cart_total);
+                    }
                     showToast('Ürün sepetten kaldırıldı.', 'success');
                     if (data.cart_count === 0) setTimeout(() => location.reload(), 600);
                 }

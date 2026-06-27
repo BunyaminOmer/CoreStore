@@ -1,8 +1,12 @@
 {% extends 'base.html' %}
-{% load store_tags %}
+{% load static store_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/customer_checkout.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+<div class="container commerce-page" style="padding-top:2rem; padding-bottom:3rem;">
 
   <!-- Breadcrumb -->
   <nav aria-label="breadcrumb">
@@ -27,7 +31,11 @@
       {% if product.image %}
         <img src="{{ product.image.url }}"
              alt="{{ product.name }}"
-             class="product-detail-img">
+             class="product-detail-img"
+             onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+        <div class="product-detail-placeholder" hidden>
+          <i class="bi bi-image"></i>
+        </div>
       {% else %}
         <div class="product-detail-placeholder">
           <i class="bi bi-image"></i>
@@ -110,6 +118,12 @@
         </button>
       </div>
 
+      <div class="commerce-assurance-row mb-4">
+        <span><i class="bi bi-truck"></i> Hızlı kargo</span>
+        <span><i class="bi bi-arrow-repeat"></i> Kolay iade</span>
+        <span><i class="bi bi-shield-check"></i> Güvenli alışveriş</span>
+      </div>
+
       <!-- Description -->
       {% if product.description %}
       <div class="mt-auto pt-4" style="border-top:1.5px solid var(--border);">
@@ -124,6 +138,76 @@
 
     </div>
   </div>
+
+  <section class="product-reviews-section">
+    <div class="product-reviews-header">
+      <div>
+        <h2>Yorumlar</h2>
+        <p>{{ reviews|length }} değerlendirme</p>
+      </div>
+      {% if user.is_authenticated %}
+      <span class="review-login-badge"><i class="bi bi-person-check"></i> Yorum yazabilirsiniz</span>
+      {% else %}
+      <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="review-login-badge text-decoration-none">
+        <i class="bi bi-box-arrow-in-right"></i> Giriş yap
+      </a>
+      {% endif %}
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-5">
+        <div class="review-form-panel">
+          <h5 class="fw-bold mb-3">Ürünü Değerlendir</h5>
+          <form method="POST">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label class="form-label-custom" for="{{ review_form.rating.id_for_label }}">Puan</label>
+              {{ review_form.rating }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label-custom" for="{{ review_form.title.id_for_label }}">Başlık</label>
+              <input type="text" name="{{ review_form.title.html_name }}" id="{{ review_form.title.id_for_label }}" class="form-control-custom" value="{{ review_form.title.value|default:'' }}" placeholder="Kısa bir başlık">
+            </div>
+            <div class="mb-3">
+              <label class="form-label-custom" for="{{ review_form.comment.id_for_label }}">Yorum</label>
+              <textarea name="{{ review_form.comment.html_name }}" id="{{ review_form.comment.id_for_label }}" class="form-control-custom" rows="4" placeholder="Ürün hakkındaki deneyiminizi yazın.">{{ review_form.comment.value|default:'' }}</textarea>
+            </div>
+            <button type="submit" class="btn-add-to-cart w-100" {% if not user.is_authenticated %}disabled{% endif %}>
+              <i class="bi bi-chat-square-text"></i>
+              Yorumu Yayınla
+            </button>
+          </form>
+        </div>
+      </div>
+      <div class="col-lg-7">
+        <div class="review-list">
+          {% for review in reviews %}
+          <article class="review-item">
+            <div class="review-item__top">
+              <div>
+                <strong>{{ review.user.get_full_name|default:review.user.username }}</strong>
+                <small>{{ review.created_at|date:"d M Y" }}</small>
+              </div>
+              <span>
+                {% for i in "12345" %}
+                  <i class="bi {% if forloop.counter <= review.rating %}bi-star-fill{% else %}bi-star{% endif %}"></i>
+                {% endfor %}
+              </span>
+            </div>
+            {% if review.title %}<h6>{{ review.title }}</h6>{% endif %}
+            <p>{{ review.comment }}</p>
+          </article>
+          {% empty %}
+          <div class="review-empty">
+            <i class="bi bi-chat-heart"></i>
+            <strong>Henüz yorum yok</strong>
+            <span>Bu ürün için ilk değerlendirmeyi siz yazabilirsiniz.</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
 
 </div>
 {% endblock %}

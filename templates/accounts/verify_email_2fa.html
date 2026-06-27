@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card auth-card email-2fa-card mx-auto">
+        <div class="card-header border-0">
+            <div class="email-2fa-icon mb-3">
+                <i class="bi bi-shield-lock"></i>
+            </div>
+            <h4 class="mb-2 fw-bold">E-posta Doğrulama</h4>
+            <p class="mb-0 text-muted">
+                {% if purpose == 'register' %}
+                    Hesabınızı tamamlamak için
+                {% else %}
+                    Güvenli giriş için
+                {% endif %}
+                <strong>{{ email }}</strong> adresine gönderilen 6 haneli kodu girin.
+            </p>
+        </div>
+        <div class="card-body p-4 p-md-5">
+            <form method="POST">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold mt-3 shadow-sm">
+                    Doğrula ve Devam Et
+                </button>
+            </form>
+
+            <div class="d-flex flex-column flex-sm-row align-items-center justify-content-between gap-3 mt-4 pt-3 border-top">
+                <a href="{% url 'accounts:resend_email_2fa' %}" class="fw-semibold text-decoration-none">
+                    Kodu tekrar gönder
+                </a>
+                <a href="{% url 'accounts:login' %}" class="text-muted text-decoration-none">
+                    Girişe dön
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

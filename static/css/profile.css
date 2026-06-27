@@ -1,0 +1,138 @@
+/* Profile page alignment fixes. Scoped with .profile-page to override legacy inline CSS safely. */
+
+.profile-page .profile-header-banner {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  border: 1px solid rgba(255, 255, 255, .4);
+  border-radius: 8px;
+  box-shadow: 0 16px 36px rgba(15, 41, 66, .12);
+  height: 190px;
+  margin-bottom: 4.25rem;
+  overflow: visible;
+  position: relative;
+}
+
+.profile-page .profile-header-banner::after {
+  border-radius: 8px;
+  opacity: .35;
+}
+
+.profile-page .profile-info-text {
+  left: 192px;
+  margin: 0;
+  max-width: calc(100% - 232px);
+  position: absolute;
+  right: 2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.profile-page .profile-info-text h2 {
+  color: #fff;
+  font-size: 1.8rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.profile-page .profile-info-text p {
+  color: rgba(255, 255, 255, .82);
+  overflow-wrap: anywhere;
+}
+
+.profile-page .profile-avatar-container {
+  bottom: -44px;
+  left: 36px;
+  margin: 0;
+  position: absolute;
+  z-index: 3;
+}
+
+.profile-page .profile-avatar,
+.profile-page .profile-avatar-placeholder {
+  border: 5px solid #fff;
+  box-shadow: 0 14px 28px rgba(15, 41, 66, .18);
+  height: 124px;
+  width: 124px;
+}
+
+.profile-page .premium-stat-card,
+.profile-page .order-card,
+.profile-page .vendor-cta-card,
+.profile-page .tab-content .bg-white,
+.profile-page .col-lg-4 > .bg-white,
+.profile-page .col-lg-4 > .bg-light {
+  border-radius: 8px !important;
+}
+
+.profile-page .premium-stat-card {
+  align-items: center;
+  min-height: 96px;
+}
+
+.profile-page .premium-tabs .nav-link {
+  border-radius: 8px;
+}
+
+.profile-shipment-box {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  gap: .85rem;
+  padding: .9rem 1rem;
+}
+
+.profile-shipment-box__icon {
+  align-items: center;
+  background: #ecfdf5;
+  border-radius: 8px;
+  color: var(--success);
+  display: flex;
+  flex: 0 0 42px;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.profile-page .vendor-cta-card {
+  border-color: var(--primary-light);
+}
+
+@media (max-width: 767.98px) {
+  .profile-page .profile-header-banner {
+    height: auto;
+    margin-bottom: 1.25rem;
+    padding: 1.4rem;
+  }
+
+  .profile-page .profile-avatar-container,
+  .profile-page .profile-info-text {
+    left: auto;
+    max-width: none;
+    position: relative;
+    right: auto;
+    top: auto;
+    transform: none;
+  }
+
+  .profile-page .profile-avatar-container {
+    bottom: auto;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+
+  .profile-page .profile-info-text {
+    text-align: center;
+  }
+
+  .profile-page .profile-info-text h2 {
+    font-size: 1.45rem;
+  }
+
+  .profile-page .profile-avatar,
+  .profile-page .profile-avatar-placeholder {
+    height: 104px;
+    width: 104px;
+  }
+}

@@ -13,6 +13,7 @@
     {% load static %}
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- Announcement Bar -->
@@ -171,17 +172,26 @@
                     <ul class="list-unstyled footer-links">
                         <li class="mb-2"><a href="#">Sıkça Sorulan Sorular</a></li>
                         <li class="mb-2"><a href="#">İade ve İptal Koşulları</a></li>
+                        <li class="mb-2"><a href="{% url 'store:feedback' %}">Geri Bildirim</a></li>
                         <li class="mb-2"><a href="#">Gizlilik Politikası</a></li>
                         <li class="mb-2"><a href="#">Mesafeli Satış Sözleşmesi</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-3 mb-4">
                     <h5 class="mb-3 text-white">İletişim</h5>
-                    <p class="text-white-50 mb-2"><i class="bi bi-envelope me-2"></i> destek@corelogic.store</p>
-                    <p class="text-white-50 mb-3"><i class="bi bi-telephone me-2"></i> 0850 123 45 67</p>
+                    <div class="footer-contact-list">
+                        <a href="mailto:destek@corelogic.store" class="footer-contact-item">
+                            <i class="bi bi-envelope"></i>
+                            <span>destek@corelogic.store</span>
+                        </a>
+                        <a href="tel:08501234567" class="footer-contact-item">
+                            <i class="bi bi-telephone"></i>
+                            <span>0850 123 45 67</span>
+                        </a>
+                    </div>
                     <div class="social-icons">
-                        <a href="#" class="btn btn-outline-light btn-sm rounded-circle me-2"><i class="bi bi-facebook"></i></a>
-                        <a href="#" class="btn btn-outline-light btn-sm rounded-circle me-2"><i class="bi bi-twitter-x"></i></a>
+                        <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-twitter-x"></i></a>
                         <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-instagram"></i></a>
                     </div>
                 </div>

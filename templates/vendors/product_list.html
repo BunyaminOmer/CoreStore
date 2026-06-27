@@ -10,6 +10,9 @@
         </div>
         <div>
             <a href="{% url 'vendors:dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4 me-2">Geri Dön</a>
+            <a href="{% url 'vendors:bulk_upload' %}" class="btn btn-outline-success rounded-pill px-4 me-2">
+                <i class="bi bi-file-earmark-spreadsheet me-2"></i>Excel Yükle
+            </a>
             <a href="{% url 'vendors:product_add' %}" class="btn btn-primary rounded-pill px-4 shadow-sm">
                 <i class="bi bi-plus-lg me-2"></i>Ürün Ekle
             </a>

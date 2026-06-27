@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load store_tags %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card bg-white border-0 shadow-sm rounded-4 mx-auto p-4 p-md-5" style="max-width: 720px;">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <div>
+                <h2 class="fw-bold mb-1">Sipariş #{{ order.id }}</h2>
+                <p class="text-muted mb-0">{{ order.created_at|date:"d.m.Y H:i" }} tarihinde oluşturuldu.</p>
+            </div>
+            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill">{{ order.get_status_display }}</span>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="bg-light rounded-3 p-3 h-100">
+                    <span class="text-muted small d-block">Alıcı</span>
+                    <strong>{{ order.shipping_recipient_name|default:order.user.get_full_name|default:order.user.username }}</strong>
+                    <div class="small text-muted">{{ order.phone }}</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="bg-light rounded-3 p-3 h-100">
+                    <span class="text-muted small d-block">Toplam Tutar</span>
+                    <strong class="text-primary fs-5">{{ order.total_amount|currency }}</strong>
+                    <div class="small text-muted">
+                        {% if order.installment_count > 1 %}
+                            {{ order.installment_card_group_name }} / {{ order.installment_count }} x {{ order.installment_monthly_amount|currency }}
+                        {% else %}
+                            Tek çekim
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="border rounded-3 p-4 mb-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-truck me-2 text-success"></i>Kargo Bilgisi</h5>
+            {% if order.shipment %}
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <span class="text-muted small d-block">Firma</span>
+                    <strong>{{ order.shipment.company.name }}</strong>
+                </div>
+                <div class="col-sm-6">
+                    <span class="text-muted small d-block">Takip Numarası</span>
+                    <strong class="text-primary">{{ order.shipment.tracking_number }}</strong>
+                </div>
+                <div class="col-12">
+                    <span class="text-muted small d-block">Durum</span>
+                    <strong>{{ order.shipment.get_status_display }}</strong>
+                    {% if order.shipment.current_station %}
+                    <div class="small text-muted">{{ order.shipment.current_station.name }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">Kargo kaydı hazırlanıyor.</p>
+            {% endif %}
+        </div>
+
+        <div class="border rounded-3 p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-box-seam me-2 text-primary"></i>Ürünler</h5>
+            {% for item in order.items.all %}
+            <div class="d-flex justify-content-between border-bottom py-2">
+                <span>{{ item.product_name }} x{{ item.quantity }}</span>
+                <strong>{{ item.line_total|currency }}</strong>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1475,6 +1475,66 @@ a:hover { color: var(--primary); }
   padding-left: 3px;
 }
 
+.site-footer .footer-links {
+  display: grid;
+  gap: .45rem;
+  margin: 0;
+}
+
+.site-footer .footer-links li {
+  margin: 0 !important;
+}
+
+.site-footer .footer-links a {
+  align-items: center;
+  display: inline-flex;
+  margin: 0;
+  min-height: 24px;
+}
+
+.site-footer .footer-contact-list {
+  display: grid;
+  gap: .55rem;
+  margin-bottom: 1rem;
+}
+
+.site-footer .footer-contact-item {
+  align-items: center;
+  display: grid;
+  gap: .55rem;
+  grid-template-columns: 20px minmax(0, 1fr);
+  margin: 0;
+  padding: 0;
+}
+
+.site-footer .footer-contact-item i {
+  color: var(--accent);
+  text-align: center;
+}
+
+.site-footer .footer-contact-item span {
+  overflow-wrap: anywhere;
+}
+
+.site-footer .social-icons {
+  display: flex;
+  gap: .5rem;
+}
+
+.site-footer .social-icons a {
+  align-items: center;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  width: 34px;
+}
+
+.site-footer .social-icons a:hover {
+  padding-left: 0;
+}
+
 .site-footer__bottom {
   border-top: 1px solid rgba(255,255,255,.1);
   padding-top: 1.25rem;
@@ -1770,3 +1830,38 @@ a:hover { color: var(--primary); }
     border-bottom: 1px solid #ffe4e6;
 }
 .low-stock-item:last-child { border-bottom: none; }
+
+/* ============================================================
+   EMAIL 2FA
+   ============================================================ */
+.email-2fa-card {
+    max-width: 500px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+}
+
+.email-2fa-card .card-header {
+    padding: 2rem 2rem 0;
+    text-align: center;
+    background: transparent;
+}
+
+.email-2fa-icon {
+    width: 64px;
+    height: 64px;
+    margin-inline: auto;
+    border-radius: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(37, 99, 168, 0.1);
+    color: var(--primary);
+    font-size: 1.8rem;
+}
+
+.email-2fa-card input[name="code"] {
+    min-height: 56px;
+    border-radius: 16px;
+    font-size: 1.6rem;
+    letter-spacing: 0.22rem;
+}

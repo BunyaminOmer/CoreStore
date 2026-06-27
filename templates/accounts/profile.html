@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags store_tags %}
+{% load static crispy_forms_tags store_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+{% endblock %}
 
 {% block content %}
 <style>
@@ -155,7 +159,7 @@
     }
 </style>
 
-<div class="container py-4">
+<div class="container py-4 profile-page">
     
     <!-- Profile Header Banner -->
     <div class="profile-header-banner">
@@ -251,10 +255,34 @@
                                     </div>
                                     
                                     <div class="text-end">
-                                        {% if order.status == 'preparing' %}<span class="badge bg-warning text-dark px-3 py-2 rounded-pill"><i class="bi bi-box-seam me-1"></i>Hazırlanıyor</span>{% endif %}
+                                        {% if order.status == 'pending' %}<span class="badge bg-warning text-dark px-3 py-2 rounded-pill"><i class="bi bi-hourglass-split me-1"></i>Beklemede</span>{% endif %}
+                                        {% if order.status == 'confirmed' %}<span class="badge bg-info text-dark px-3 py-2 rounded-pill"><i class="bi bi-check2-circle me-1"></i>Onaylandı</span>{% endif %}
                                         {% if order.status == 'shipped' %}<span class="badge bg-info text-dark px-3 py-2 rounded-pill"><i class="bi bi-truck me-1"></i>Kargoda</span>{% endif %}
                                         {% if order.status == 'delivered' %}<span class="badge bg-success px-3 py-2 rounded-pill"><i class="bi bi-check-circle me-1"></i>Teslim Edildi</span>{% endif %}
                                         {% if order.status == 'cancelled' %}<span class="badge bg-danger px-3 py-2 rounded-pill"><i class="bi bi-x-circle me-1"></i>İptal Edildi</span>{% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="profile-shipment-box mb-3">
+                                    <div class="profile-shipment-box__icon">
+                                        <i class="bi bi-truck"></i>
+                                    </div>
+                                    <div>
+                                        <span class="text-muted small d-block">Kargo Takibi</span>
+                                        {% if order.shipment %}
+                                            <div class="fw-bold text-dark">
+                                                {{ order.shipment.company.name }} - {{ order.shipment.tracking_number }}
+                                            </div>
+                                            <div class="small text-muted">
+                                                {{ order.shipment.get_status_display }}
+                                                {% if order.shipment.current_station %}
+                                                    · {{ order.shipment.current_station.name }}
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <div class="fw-bold text-dark">Kargo kaydı hazırlanıyor</div>
+                                            <div class="small text-muted">Sipariş kargoya verildiğinde CoreJet takip numarası burada görünecek.</div>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 

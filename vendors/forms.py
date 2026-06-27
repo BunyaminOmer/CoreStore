@@ -49,3 +49,35 @@ class VendorProductForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class BulkProductUploadForm(forms.Form):
+    file = forms.FileField(
+        label='Excel Dosyası',
+        help_text='Sadece .xlsx dosyası yükleyin. En fazla 5 MB.',
+        widget=forms.ClearableFileInput(attrs={
+            'accept': '.xlsx',
+            'class': 'form-control',
+        }),
+    )
+    update_existing = forms.BooleanField(
+        label='Aynı isimli ürünleri güncelle',
+        required=False,
+        help_text='Kapalıysa aynı isimli ürünler hata olarak raporlanır.',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),
+    )
+    activate_products = forms.BooleanField(
+        label='Dosyadaki ürünleri aktif olarak işaretle',
+        required=False,
+        initial=True,
+        help_text='Excel içindeki Aktif kolonu boşsa bu seçim kullanılır.',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),
+    )
+
+    def clean_file(self):
+        uploaded_file = self.cleaned_data['file']
+        if not uploaded_file.name.lower().endswith('.xlsx'):
+            raise forms.ValidationError('Lütfen .xlsx uzantılı bir Excel dosyası yükleyin.')
+        if uploaded_file.size > 5 * 1024 * 1024:
+            raise forms.ValidationError('Dosya boyutu 5 MB sınırını aşamaz.')
+        return uploaded_file

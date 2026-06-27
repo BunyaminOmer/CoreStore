@@ -1,189 +1,246 @@
 {% extends 'base.html' %}
-{% load store_tags %}
+{% load static store_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/customer_home.css' %}">
+{% endblock %}
 
 {% block content %}
-
-<!-- ── Hero ── -->
-<section class="hero-section">
+<section class="home-hero">
   <div class="container">
-    <div class="row align-items-center">
-      <div class="col-lg-7">
-
-        <div class="hero-badge fade-in-up">
-          <i class="bi bi-lightning-fill"></i>
-          Güvenilir satıcılar, binlerce ürün
+    <div class="home-hero__grid">
+      <div class="home-hero__copy">
+        <span class="home-eyebrow">CoreLogic Store</span>
+        <h1>Güvenilir satıcılardan hızlı alışveriş.</h1>
+        <p>Ürünleri kategorilere göre keşfet, fiyatı net gör, sepete hızlıca ekle.</p>
+        <div class="home-hero__actions">
+          <a href="#products" class="home-btn home-btn--primary">Alışverişe başla</a>
+          <a href="#categories" class="home-btn home-btn--secondary">Kategoriler</a>
         </div>
-
-        <h1 class="hero-title fade-in-up stagger-1">
-          Alışverişin<br>
-          en <em>akıllı</em> adresi
-        </h1>
-
-        <p class="hero-subtitle fade-in-up stagger-2">
-          Onlarca kategoride en kaliteli ürünleri,
-          güvenilir satıcılardan tek tıkla keşfedin.
-        </p>
-
-        <div class="d-flex gap-3 flex-wrap fade-in-up stagger-3">
-          <a href="#products" class="hero-cta">
-            Alışverişe Başla
-            <i class="bi bi-arrow-right"></i>
-          </a>
-          <a href="#categories" class="hero-cta-secondary">
-            Kategorileri Gör
-          </a>
-        </div>
-
-        <div class="hero-stats fade-in-up stagger-4">
-          <div>
-            <div class="hero-stat-value">500+</div>
-            <div class="hero-stat-label">Ürün</div>
-          </div>
-          <div>
-            <div class="hero-stat-value">50+</div>
-            <div class="hero-stat-label">Satıcı</div>
-          </div>
-          <div>
-            <div class="hero-stat-value">%100</div>
-            <div class="hero-stat-label">Güvenli</div>
-          </div>
-        </div>
-
       </div>
-    </div>
-  </div>
-</section>
 
-<!-- ── Categories ── -->
-<section id="categories" class="section">
-  <div class="container">
-    <div class="section-header">
-      <h2 class="section-title">Kategoriler</h2>
-      <a href="{% url 'store:home' %}" class="section-link">
-        Tümünü gör <i class="bi bi-arrow-right"></i>
-      </a>
-    </div>
-
-    <div class="row g-4">
-      {% for category in categories %}
-      <div class="col-lg-3 col-md-4 col-sm-6 fade-in-up" style="animation-delay:{{ forloop.counter0 }}0ms">
-        <a href="{% url 'store:category' category.slug %}" class="category-mega-card">
-          <div class="category-mega-icon">
-            {% if category.image %}
-              <img src="{{ category.image.url }}" alt="{{ category.name }}" style="width: 48px; height: 48px; object-fit: contain;">
+      <div class="home-hero__products" aria-label="Öne çıkan ürünler">
+        {% for card in featured_product_cards|slice:":3" %}
+        <a href="{% url 'store:product_detail' card.product.slug %}" class="home-featured">
+          <span class="home-featured__image">
+            {% if card.product.image %}
+              <img src="{{ card.product.image.url }}"
+                   alt="{{ card.product.name }}"
+                   loading="lazy"
+                   onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+              <i class="bi bi-image" hidden></i>
             {% else %}
-              <i class="bi bi-grid-fill"></i>
+              <i class="bi bi-image"></i>
             {% endif %}
-          </div>
-          <h3 class="category-mega-title">{{ category.name }}</h3>
-          <p class="text-muted small mb-3">{{ category.description|truncatechars:50|default:"Tüm alt kategorileri ve ürünleri keşfedin." }}</p>
-          
-          <ul class="category-sub-list">
-            {% for child in category.children.all|slice:":3" %}
-              <li class="category-sub-pill">{{ child.name }}</li>
-            {% endfor %}
-            {% if category.children.count > 3 %}
-              <li class="category-sub-pill">+{{ category.children.count|add:"-3" }}</li>
-            {% endif %}
-          </ul>
-        </a>
-      </div>
-      {% empty %}
-      <div class="col-12">
-        <div class="empty-state">
-          <i class="bi bi-grid empty-state__icon"></i>
-          <p class="empty-state__title">Kategori bulunamadı.</p>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</section>
-
-<!-- ── Featured Products ── -->
-<section id="products" class="section" style="padding-top:0">
-  <div class="container">
-    <div class="section-header">
-      <h2 class="section-title">Öne Çıkan Ürünler</h2>
-      <a href="{% url 'store:home' %}" class="section-link">
-        Tüm ürünler <i class="bi bi-arrow-right"></i>
-      </a>
-    </div>
-
-    <div class="row g-4">
-      {% for product in products %}
-      <div class="col-lg-3 col-md-4 col-sm-6 fade-in-up" style="animation-delay:{{ forloop.counter0 }}0ms">
-        <div class="product-card">
-
-          {% if product.discount_price %}
-            <span class="sale-badge">
-              İndirim
-            </span>
-          {% endif %}
-
-          <!-- Image -->
-          <div class="product-card__img">
-            {% if product.image %}
-              <a href="{% url 'store:product_detail' product.slug %}">
-                <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
-              </a>
-            {% else %}
-              <a href="{% url 'store:product_detail' product.slug %}" class="product-card__img-placeholder">
-                <i class="bi bi-image"></i>
-              </a>
-            {% endif %}
-
-            <!-- Quick Add -->
-            <div class="product-card__overlay">
-              <button class="product-card__quick-add" onclick="addToCart({{ product.id }})">
-                <i class="bi bi-cart-plus"></i>
-                Hızlı Ekle
-              </button>
-            </div>
-          </div>
-
-          <!-- Body -->
-          <div class="product-card__body">
-            <div class="product-card__vendor">
-              <i class="bi bi-shop"></i>
-              {{ product.vendor.store_name }}
-            </div>
-
-            <a href="{% url 'store:product_detail' product.slug %}" class="product-card__name">
-              {{ product.name }}
-            </a>
-
-            <div class="product-card__price-row">
-              {% if product.discount_price %}
-                <span class="product-card__price product-card__price--sale">
-                  {{ product.discount_price|currency }}
-                </span>
-                <span class="product-card__old-price">{{ product.price|currency }}</span>
+          </span>
+          <span class="home-featured__body">
+            <small>{{ card.product.vendor.store_name }}</small>
+            <strong>{{ card.title|truncatechars:42 }}</strong>
+            <span>
+              {% if card.product.discount_price %}
+                {{ card.product.discount_price|currency }}
               {% else %}
-                <span class="product-card__price">{{ product.price|currency }}</span>
+                {{ card.product.price|currency }}
               {% endif %}
-            </div>
-
-            <button class="product-card__add-btn" onclick="addToCart({{ product.id }})">
-              <i class="bi bi-cart-plus"></i>
-              Sepete Ekle
-            </button>
-          </div>
-
+            </span>
+          </span>
+        </a>
+        {% empty %}
+        <div class="home-featured home-featured--empty">
+          <span class="home-featured__image"><i class="bi bi-box-seam"></i></span>
+          <span class="home-featured__body">
+            <small>Vitrin</small>
+            <strong>Ürünler yakında burada görünecek.</strong>
+          </span>
         </div>
+        {% endfor %}
       </div>
-      {% empty %}
-      <div class="col-12">
-        <div class="empty-state">
-          <i class="bi bi-box-seam empty-state__icon"></i>
-          <p class="empty-state__title">Henüz ürün eklenmedi.</p>
-          <p class="empty-state__text">Yakında yeni ürünler burada olacak.</p>
-        </div>
-      </div>
-      {% endfor %}
     </div>
-
   </div>
 </section>
 
+{% if campaigns %}
+<section class="home-campaign-board" aria-label="Kampanyalar">
+  <div class="container">
+    <div class="home-campaign-board__shell">
+      <div class="home-campaign-board__label">
+        <i class="bi bi-megaphone-fill"></i>
+        Kampanyalar
+      </div>
+      <div class="home-campaign-board__viewport">
+        <div class="home-campaign-board__track">
+          {% for campaign in campaigns %}
+          <a href="{{ campaign.link_url|default:'#products' }}" class="home-campaign-card">
+            <span class="home-campaign-card__media">
+              {% if campaign.image %}
+                <img src="{{ campaign.image.url }}"
+                     alt="{{ campaign.title }}"
+                     loading="lazy"
+                     onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                <i class="bi bi-image" hidden></i>
+              {% else %}
+                <i class="bi bi-megaphone"></i>
+              {% endif %}
+            </span>
+            <span class="home-campaign-card__content">
+              {% if campaign.badge_text %}
+              <small>{{ campaign.badge_text }}</small>
+              {% endif %}
+              <strong>{{ campaign.title }}</strong>
+              {% if campaign.subtitle %}
+              <span>{{ campaign.subtitle }}</span>
+              {% endif %}
+            </span>
+            <span class="home-campaign-card__action">
+              {{ campaign.link_text|default:'İncele' }}
+              <i class="bi bi-arrow-right"></i>
+            </span>
+          </a>
+          {% endfor %}
+          {% for campaign in campaigns %}
+          <a href="{{ campaign.link_url|default:'#products' }}" class="home-campaign-card" aria-hidden="true" tabindex="-1">
+            <span class="home-campaign-card__media">
+              {% if campaign.image %}
+                <img src="{{ campaign.image.url }}"
+                     alt=""
+                     loading="lazy"
+                     onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                <i class="bi bi-image" hidden></i>
+              {% else %}
+                <i class="bi bi-megaphone"></i>
+              {% endif %}
+            </span>
+            <span class="home-campaign-card__content">
+              {% if campaign.badge_text %}
+              <small>{{ campaign.badge_text }}</small>
+              {% endif %}
+              <strong>{{ campaign.title }}</strong>
+              {% if campaign.subtitle %}
+              <span>{{ campaign.subtitle }}</span>
+              {% endif %}
+            </span>
+            <span class="home-campaign-card__action">
+              {{ campaign.link_text|default:'İncele' }}
+              <i class="bi bi-arrow-right"></i>
+            </span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section id="categories" class="home-section home-section--tight">
+  <div class="container">
+    <div class="home-section__head">
+      <div>
+        <span class="home-eyebrow">Hızlı erişim</span>
+        <h2>Kategoriler</h2>
+      </div>
+    </div>
+
+    <div class="home-category-rail">
+      {% for card in featured_category_cards %}
+      <a href="{% url 'store:category' card.category.slug %}" class="home-category">
+        <span class="home-category__icon">
+          {% if card.category.image %}
+            <img src="{{ card.category.image.url }}"
+                 alt="{{ card.category.name }}"
+                 loading="lazy"
+                 onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+            <i class="bi bi-grid" hidden></i>
+          {% else %}
+            <i class="bi bi-grid"></i>
+          {% endif %}
+        </span>
+        <span>{{ card.label }}</span>
+      </a>
+      {% empty %}
+      <div class="home-empty-inline">Henüz kategori bulunmuyor.</div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="home-service">
+  <div class="container">
+    <div class="home-service__grid">
+      <div>
+        <i class="bi bi-shield-check"></i>
+        <strong>Güvenli alışveriş</strong>
+        <span>Net sepet ve ödeme akışı</span>
+      </div>
+      <div>
+        <i class="bi bi-shop"></i>
+        <strong>Seçilmiş satıcılar</strong>
+        <span>Mağaza bilgisi görünür</span>
+      </div>
+      <div>
+        <i class="bi bi-lightning-charge"></i>
+        <strong>Hızlı karar</strong>
+        <span>Sade ürün kartları</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="products" class="home-section">
+  <div class="container">
+    <div class="home-section__head">
+      <div>
+        <span class="home-eyebrow">Vitrin</span>
+        <h2>Öne çıkan ürünler</h2>
+      </div>
+      <a href="#products" class="home-section__link">Tümünü gör</a>
+    </div>
+
+    <div class="home-product-grid">
+      {% for card in featured_product_cards %}
+      <article class="home-product">
+        <a href="{% url 'store:product_detail' card.product.slug %}" class="home-product__media">
+          {% if card.product.discount_price %}
+            <span class="home-product__badge">İndirim</span>
+          {% endif %}
+          {% if card.product.image %}
+            <img src="{{ card.product.image.url }}"
+                 alt="{{ card.product.name }}"
+                 loading="lazy"
+                 onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+            <span class="home-product__placeholder" hidden><i class="bi bi-image"></i></span>
+          {% else %}
+            <span class="home-product__placeholder"><i class="bi bi-image"></i></span>
+          {% endif %}
+        </a>
+        <div class="home-product__body">
+          <div class="home-product__vendor">
+            <i class="bi bi-shop"></i>
+            {{ card.product.vendor.store_name }}
+          </div>
+          <a href="{% url 'store:product_detail' card.product.slug %}" class="home-product__name">{{ card.title }}</a>
+          <div class="home-product__price">
+            {% if card.product.discount_price %}
+              <strong class="is-sale">{{ card.product.discount_price|currency }}</strong>
+              <span>{{ card.product.price|currency }}</span>
+            {% else %}
+              <strong>{{ card.product.price|currency }}</strong>
+            {% endif %}
+          </div>
+          <button class="home-product__button" onclick="addToCart({{ card.product.id }})">
+            <i class="bi bi-cart-plus"></i>
+            Sepete ekle
+          </button>
+        </div>
+      </article>
+      {% empty %}
+      <div class="empty-state">
+        <i class="bi bi-box-seam empty-state__icon"></i>
+        <p class="empty-state__title">Henüz ürün eklenmedi.</p>
+        <p class="empty-state__text">Yakında yeni ürünler burada olacak.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
 {% endblock %}

@@ -1,83 +1,181 @@
 {% extends 'base.html' %}
-{% load store_tags crispy_forms_tags %}
+{% load static store_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/customer_checkout.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
-
+<div class="container commerce-page" style="padding-top:2rem; padding-bottom:3rem;">
   <div class="section-header" style="margin-bottom:1.75rem;">
     <h1 class="section-title">Siparişi Tamamla</h1>
   </div>
 
   <div class="row g-4">
-
-    <!-- ── Left: Form ── -->
     <div class="col-lg-7">
+      <form method="POST" id="checkout-form">
+        {% csrf_token %}
+        {{ form.address_action }}
 
-      <!-- Delivery Address -->
-      <div class="checkout-card">
-        <h2 class="checkout-card__title">
-          <i class="bi bi-geo-alt-fill" style="color:var(--primary-light);"></i>
-          Teslimat Bilgileri
-        </h2>
+        {% if form.non_field_errors %}
+        <div class="checkout-alert">
+          <i class="bi bi-exclamation-circle-fill me-2"></i>
+          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+        {% endif %}
 
-        <form method="POST" id="checkout-form">
-          {% csrf_token %}
+        <div class="checkout-card">
+          <h2 class="checkout-card__title">
+            <i class="bi bi-geo-alt-fill" style="color:var(--primary-light);"></i>
+            Teslimat Adresi
+          </h2>
 
-          {% if form.non_field_errors %}
-          <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:var(--radius-xs); padding:.85rem 1rem; margin-bottom:1rem; font-size:.875rem; color:var(--danger);">
-            <i class="bi bi-exclamation-circle-fill me-2"></i>
-            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+          {% if addresses %}
+          <div class="saved-address-grid">
+            {% for address in addresses %}
+            <label class="saved-address-card">
+              <input type="radio"
+                     name="{{ form.address_id.html_name }}"
+                     value="{{ address.id }}"
+                     {% if form.address_id.value|stringformat:"s" == address.id|stringformat:"s" %}checked{% endif %}
+                     data-title="{{ address.title }}"
+                     data-recipient="{{ address.recipient_name }}"
+                     data-phone="{{ address.phone }}"
+                     data-city="{{ address.city }}"
+                     data-district="{{ address.district }}"
+                     data-postal="{{ address.postal_code }}"
+                     data-address="{{ address.address_line|escape }}"
+                     onchange="fillAddressFromRadio(this)">
+              <span class="saved-address-card__body">
+                <strong>{{ address.title }}</strong>
+                {% if address.is_default %}<em>Varsayılan</em>{% endif %}
+                <small>{{ address.recipient_name }} · {{ address.phone }}</small>
+                <small>{{ address.formatted_address|truncatechars:82 }}</small>
+              </span>
+            </label>
+            {% endfor %}
           </div>
           {% endif %}
 
-          <!-- Shipping Address -->
-          <div style="margin-bottom:1rem;">
-            <label class="form-label-custom" for="{{ form.shipping_address.id_for_label }}">
-              Teslimat Adresi
-            </label>
-            <textarea name="{{ form.shipping_address.html_name }}"
-                      id="{{ form.shipping_address.id_for_label }}"
-                      class="form-control-custom {% if form.shipping_address.errors %}is-invalid{% endif %}"
-                      rows="3"
-                      placeholder="Açık teslimat adresinizi giriniz.">{{ form.shipping_address.value|default:'' }}</textarea>
-            {% if form.shipping_address.errors %}
-              <div style="color:var(--danger); font-size:.8rem; margin-top:.3rem;">{{ form.shipping_address.errors.0 }}</div>
-            {% endif %}
+          <div class="checkout-field-grid">
+            <div>
+              <label class="form-label-custom" for="{{ form.address_title.id_for_label }}">Adres Başlığı</label>
+              <input type="text" name="{{ form.address_title.html_name }}" id="{{ form.address_title.id_for_label }}" class="form-control-custom" value="{{ form.address_title.value|default:'' }}" placeholder="Ev, Ofis, Depo">
+            </div>
+            <div>
+              <label class="form-label-custom" for="{{ form.shipping_recipient_name.id_for_label }}">Alıcı Ad Soyad</label>
+              <input type="text" name="{{ form.shipping_recipient_name.html_name }}" id="{{ form.shipping_recipient_name.id_for_label }}" class="form-control-custom" value="{{ form.shipping_recipient_name.value|default:'' }}" placeholder="Ad Soyad">
+              {% if form.shipping_recipient_name.errors %}<div class="field-error">{{ form.shipping_recipient_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div>
+              <label class="form-label-custom" for="{{ form.phone.id_for_label }}">Kargo Telefonu</label>
+              <input type="text" name="{{ form.phone.html_name }}" id="{{ form.phone.id_for_label }}" class="form-control-custom" value="{{ form.phone.value|default:'' }}" placeholder="05XX XXX XX XX">
+              {% if form.phone.errors %}<div class="field-error">{{ form.phone.errors.0 }}</div>{% endif %}
+            </div>
+            <div>
+              <label class="form-label-custom" for="{{ form.shipping_city.id_for_label }}">Şehir</label>
+              <input type="text" name="{{ form.shipping_city.html_name }}" id="{{ form.shipping_city.id_for_label }}" class="form-control-custom" value="{{ form.shipping_city.value|default:'' }}" placeholder="İstanbul">
+              {% if form.shipping_city.errors %}<div class="field-error">{{ form.shipping_city.errors.0 }}</div>{% endif %}
+            </div>
+            <div>
+              <label class="form-label-custom" for="{{ form.shipping_district.id_for_label }}">İlçe</label>
+              <input type="text" name="{{ form.shipping_district.html_name }}" id="{{ form.shipping_district.id_for_label }}" class="form-control-custom" value="{{ form.shipping_district.value|default:'' }}" placeholder="Kadıköy">
+            </div>
+            <div>
+              <label class="form-label-custom" for="{{ form.shipping_postal_code.id_for_label }}">Posta Kodu</label>
+              <input type="text" name="{{ form.shipping_postal_code.html_name }}" id="{{ form.shipping_postal_code.id_for_label }}" class="form-control-custom" value="{{ form.shipping_postal_code.value|default:'' }}" placeholder="34000">
+            </div>
           </div>
 
-          <!-- Phone -->
-          <div style="margin-bottom:1.5rem;">
-            <label class="form-label-custom" for="{{ form.phone.id_for_label }}">
-              Telefon Numarası
-            </label>
-            <input type="text"
-                   name="{{ form.phone.html_name }}"
-                   id="{{ form.phone.id_for_label }}"
-                   class="form-control-custom {% if form.phone.errors %}is-invalid{% endif %}"
-                   value="{{ form.phone.value|default:'' }}"
-                   placeholder="05XX XXX XX XX">
-            {% if form.phone.errors %}
-              <div style="color:var(--danger); font-size:.8rem; margin-top:.3rem;">{{ form.phone.errors.0 }}</div>
-            {% endif %}
+          <div style="margin-top:1rem;">
+            <label class="form-label-custom" for="{{ form.shipping_address.id_for_label }}">Açık Adres</label>
+            <textarea name="{{ form.shipping_address.html_name }}" id="{{ form.shipping_address.id_for_label }}" class="form-control-custom" rows="3" placeholder="Mahalle, cadde, sokak, bina/daire bilgisi">{{ form.shipping_address.value|default:'' }}</textarea>
+            {% if form.shipping_address.errors %}<div class="field-error">{{ form.shipping_address.errors.0 }}</div>{% endif %}
           </div>
 
-          <!-- Note -->
-          <div>
-            <label class="form-label-custom" for="{{ form.note.id_for_label }}">
-              Sipariş Notu <span style="color:var(--text-light); font-weight:400; text-transform:none;">(opsiyonel)</span>
-            </label>
-            <textarea name="{{ form.note.html_name }}"
-                      id="{{ form.note.id_for_label }}"
-                      class="form-control-custom"
-                      rows="2"
-                      placeholder="Siparişinizle ilgili eklemek istedikleriniz">{{ form.note.value|default:'' }}</textarea>
+          <div class="checkout-option-row">
+            <label>{{ form.save_address }} <span>Bu adresi kaydet</span></label>
+            <label>{{ form.set_default_address }} <span>Varsayılan adres yap</span></label>
           </div>
 
-        </form>
-      </div>
+          <div class="checkout-address-actions">
+            <button type="submit" class="btn btn-outline-primary rounded-pill px-4" onclick="setAddressAction('save_address')">
+              <i class="bi bi-bookmark-plus me-1"></i>Adresi Kaydet
+            </button>
+            <button type="submit" class="btn btn-outline-secondary rounded-pill px-4" onclick="setAddressAction('update_address')">
+              <i class="bi bi-pencil-square me-1"></i>Seçili Adresi Güncelle
+            </button>
+            <button type="submit" class="btn btn-outline-danger rounded-pill px-4" onclick="return deleteSelectedAddress()">
+              <i class="bi bi-trash me-1"></i>Sil
+            </button>
+          </div>
+        </div>
 
-      <!-- Payment (Simulation) -->
-      <div class="checkout-card">
+        <div class="checkout-card">
+          <h2 class="checkout-card__title">
+            <i class="bi bi-file-earmark-text-fill" style="color:var(--primary-light);"></i>
+            Fatura Bilgileri
+          </h2>
+
+          <div class="payment-methods" aria-label="Fatura tipi">
+            <label class="payment-method is-active" id="billing-individual-label">
+              <input type="radio" name="{{ form.billing_type.html_name }}" value="individual" {% if form.billing_type.value != 'corporate' %}checked{% endif %} onchange="syncBillingType()">
+              <i class="bi bi-person"></i>Bireysel
+            </label>
+            <label class="payment-method" id="billing-corporate-label">
+              <input type="radio" name="{{ form.billing_type.html_name }}" value="corporate" {% if form.billing_type.value == 'corporate' %}checked{% endif %} onchange="syncBillingType()">
+              <i class="bi bi-building"></i>Kurumsal
+            </label>
+          </div>
+
+          <div class="checkout-option-row" style="margin-top:0;">
+            <label>{{ form.billing_same_as_shipping }} <span>Fatura adresi teslimat adresiyle aynı</span></label>
+          </div>
+
+          <div class="checkout-field-grid">
+            <div>
+              <label class="form-label-custom" for="{{ form.billing_full_name.id_for_label }}">Fatura Ad Soyad</label>
+              <input type="text" name="{{ form.billing_full_name.html_name }}" id="{{ form.billing_full_name.id_for_label }}" class="form-control-custom" value="{{ form.billing_full_name.value|default:'' }}">
+              {% if form.billing_full_name.errors %}<div class="field-error">{{ form.billing_full_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div>
+              <label class="form-label-custom" for="{{ form.billing_email.id_for_label }}">Fatura E-postası</label>
+              <input type="email" name="{{ form.billing_email.html_name }}" id="{{ form.billing_email.id_for_label }}" class="form-control-custom" value="{{ form.billing_email.value|default:'' }}">
+            </div>
+            <div class="billing-corporate-field">
+              <label class="form-label-custom" for="{{ form.billing_company_name.id_for_label }}">Firma Ünvanı</label>
+              <input type="text" name="{{ form.billing_company_name.html_name }}" id="{{ form.billing_company_name.id_for_label }}" class="form-control-custom" value="{{ form.billing_company_name.value|default:'' }}">
+              {% if form.billing_company_name.errors %}<div class="field-error">{{ form.billing_company_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="billing-corporate-field">
+              <label class="form-label-custom" for="{{ form.billing_tax_office.id_for_label }}">Vergi Dairesi</label>
+              <input type="text" name="{{ form.billing_tax_office.html_name }}" id="{{ form.billing_tax_office.id_for_label }}" class="form-control-custom" value="{{ form.billing_tax_office.value|default:'' }}">
+              {% if form.billing_tax_office.errors %}<div class="field-error">{{ form.billing_tax_office.errors.0 }}</div>{% endif %}
+            </div>
+            <div>
+              <label class="form-label-custom" for="{{ form.billing_tax_number.id_for_label }}">Vergi/TCKN No</label>
+              <input type="text" name="{{ form.billing_tax_number.html_name }}" id="{{ form.billing_tax_number.id_for_label }}" class="form-control-custom" value="{{ form.billing_tax_number.value|default:'' }}">
+              {% if form.billing_tax_number.errors %}<div class="field-error">{{ form.billing_tax_number.errors.0 }}</div>{% endif %}
+            </div>
+            <div>
+              <label class="form-label-custom" for="{{ form.billing_phone.id_for_label }}">Fatura Telefonu</label>
+              <input type="text" name="{{ form.billing_phone.html_name }}" id="{{ form.billing_phone.id_for_label }}" class="form-control-custom" value="{{ form.billing_phone.value|default:'' }}">
+            </div>
+          </div>
+
+          <div style="margin-top:1rem;">
+            <label class="form-label-custom" for="{{ form.billing_address.id_for_label }}">Fatura Adresi</label>
+            <textarea name="{{ form.billing_address.html_name }}" id="{{ form.billing_address.id_for_label }}" class="form-control-custom" rows="3">{{ form.billing_address.value|default:'' }}</textarea>
+          </div>
+
+          <div style="margin-top:1rem;">
+            <label class="form-label-custom" for="{{ form.note.id_for_label }}">Sipariş Notu <span style="color:var(--text-light); font-weight:400; text-transform:none;">(opsiyonel)</span></label>
+            <textarea name="{{ form.note.html_name }}" id="{{ form.note.id_for_label }}" class="form-control-custom" rows="2" placeholder="Siparişinizle ilgili eklemek istedikleriniz">{{ form.note.value|default:'' }}</textarea>
+          </div>
+        </div>
+      </form>
+
+      <div class="checkout-card payment-shell">
         <h2 class="checkout-card__title">
           <i class="bi bi-credit-card-fill" style="color:var(--primary-light);"></i>
           Ödeme Bilgileri
@@ -85,54 +183,159 @@
 
         <div class="payment-demo-notice">
           <i class="bi bi-info-circle-fill" style="flex-shrink:0; margin-top:1px;"></i>
-          <span>Bu bir demo projesidir. Gerçek ödeme alınmamaktadır. Kart bilgilerini doldurmayın.</span>
+          <span>Demo ödeme simülasyonu: gerçek karttan çekim yapılmaz, bilgiler kayıt edilmez.</span>
         </div>
 
-        <!-- Card name -->
-        <div style="margin-bottom:1rem;">
-          <label class="form-label-custom">Kart Üzerindeki İsim</label>
-          <input type="text" class="form-control-custom" placeholder="Ad Soyad">
+        <div class="payment-methods" aria-label="Ödeme yöntemi">
+          <button type="button" class="payment-method is-active">
+            <i class="bi bi-credit-card-2-front"></i>
+            Kart
+          </button>
+          <button type="button" class="payment-method" aria-disabled="true">
+            <i class="bi bi-cash-stack"></i>
+            Kapıda
+          </button>
+          <button type="button" class="payment-method" aria-disabled="true">
+            <i class="bi bi-bank"></i>
+            Havale
+          </button>
         </div>
 
-        <!-- Card number -->
-        <div style="margin-bottom:1rem;">
-          <label class="form-label-custom">Kart Numarası</label>
-          <input type="text" class="form-control-custom" placeholder="0000  0000  0000  0000" maxlength="19"
-                 oninput="formatCardNumber(this)">
-        </div>
-
-        <!-- Expiry + CVC -->
-        <div class="card-input-grid">
-          <div>
-            <label class="form-label-custom">Son Kullanma</label>
-            <input type="text" class="form-control-custom" placeholder="AA / YY" maxlength="5"
-                   oninput="formatExpiry(this)">
+        <div class="installment-board is-locked" id="installment-board">
+          <div class="installment-board__header">
+            <div>
+              <span>Taksit Seçenekleri</span>
+              <small>İlk 6 hane yazıldıktan sonra kategoriye uygun yasal taksit limiti gösterilir.</small>
+            </div>
+            <strong id="installment-mini-summary">Kart bekleniyor</strong>
           </div>
-          <div>
-            <label class="form-label-custom">CVC</label>
-            <input type="text" class="form-control-custom" placeholder="123" maxlength="3">
+
+          {% if installment_groups %}
+          <input type="hidden"
+                 name="payment_card_group"
+                 form="checkout-form"
+                 id="payment-card-group-input"
+                 value="{% if selected_installment_group %}{{ selected_installment_group.id }}{% endif %}">
+          <div class="card-detection-panel" id="card-detection-panel">
+            <i class="bi bi-credit-card-2-front"></i>
+            <div>
+              <strong id="card-detection-title">Kart numaranızı girin</strong>
+              <small id="card-detection-text">İlk 6 hane tamamlanınca taksit seçenekleri otomatik açılır.</small>
+            </div>
+          </div>
+
+          <div class="installment-group-grid" aria-label="Kart grupları" hidden>
+            {% for group_item in installment_groups %}
+            <label class="installment-group-card {% if selected_installment_group and group_item.id == selected_installment_group.id %}is-active{% endif %}" data-group-card="{{ group_item.id }}" data-group-name="{{ group_item.name }}">
+              <span>
+                <strong>{{ group_item.name }}</strong>
+                {% if group_item.description %}<small>{{ group_item.description }}</small>{% endif %}
+              </span>
+              <em>En fazla {{ group_item.max_installments }}</em>
+            </label>
+            {% endfor %}
+          </div>
+
+          {% for group_item in installment_groups %}
+          <div class="installment-options {% if selected_installment_group and group_item.id == selected_installment_group.id %}is-visible{% endif %}" data-installment-group="{{ group_item.id }}">
+            {% for option in group_item.options %}
+            <label class="installment-option">
+              <input type="radio"
+                     name="installment_count"
+                     form="checkout-form"
+                     value="{{ option.count }}"
+                     data-count="{{ option.count }}"
+                     data-rate="{{ option.rate_percent }}"
+                     data-total="{{ option.total }}"
+                     data-monthly="{{ option.monthly }}"
+                     {% if selected_installment_group and group_item.id == selected_installment_group.id and option.count == selected_installment.count %}checked{% endif %}
+                     onchange="syncInstallmentSummary()">
+              <span>
+                {% if option.count == 1 %}Tek çekim{% else %}{{ option.count }} taksit{% endif %}
+                {% if option.rate_percent > 0 %}<small>%{{ option.rate_percent }} vade farkı</small>{% else %}<small>Vade farksız</small>{% endif %}
+              </span>
+              <strong>
+                {% if option.count == 1 %}
+                  {{ option.total|currency }}
+                {% else %}
+                  {{ option.monthly|currency }} x {{ option.count }}
+                {% endif %}
+              </strong>
+            </label>
+            {% endfor %}
+          </div>
+          {% endfor %}
+          {% else %}
+          <input type="hidden" name="installment_count" form="checkout-form" value="1">
+          <div class="installment-empty">Aktif taksit grubu bulunmadığı için ödeme tek çekim alınır.</div>
+          {% endif %}
+        </div>
+
+        <div class="payment-layout">
+          <div class="payment-card-preview" aria-hidden="true">
+            <div class="payment-card-preview__top">
+              <span id="card-brand">CoreCard</span>
+              <i class="bi bi-wifi-2"></i>
+            </div>
+            <div class="payment-card-preview__number" id="card-preview-number">0000 0000 0000 0000</div>
+            <div class="payment-card-preview__bottom">
+              <span id="card-preview-name">AD SOYAD</span>
+              <span id="card-preview-expiry">AA/YY</span>
+            </div>
+          </div>
+
+          <div class="payment-fields">
+            <div style="margin-bottom:1rem;">
+              <label class="form-label-custom" for="card-name">Kart Üzerindeki İsim</label>
+              <input type="text" id="card-name" class="form-control-custom" placeholder="Ad Soyad" autocomplete="cc-name" oninput="syncCardPreview()">
+            </div>
+            <div style="margin-bottom:1rem;">
+              <label class="form-label-custom" for="card-number">Kart Numarası</label>
+              <input type="text" id="card-number" class="form-control-custom" placeholder="0000 0000 0000 0000" maxlength="19" inputmode="numeric" autocomplete="cc-number" oninput="formatCardNumber(this)">
+            </div>
+            <div class="card-input-grid">
+              <div>
+                <label class="form-label-custom" for="card-expiry">Son Kullanma</label>
+                <input type="text" id="card-expiry" class="form-control-custom" placeholder="AA/YY" maxlength="5" inputmode="numeric" autocomplete="cc-exp" oninput="formatExpiry(this)">
+              </div>
+              <div>
+                <label class="form-label-custom" for="card-cvc">CVC</label>
+                <input type="text" id="card-cvc" class="form-control-custom" placeholder="123" maxlength="4" inputmode="numeric" autocomplete="cc-csc" oninput="formatCvc(this)">
+              </div>
+            </div>
           </div>
         </div>
 
-        <button type="submit" form="checkout-form" class="btn-place-order">
+        <div class="payment-security-row">
+          <span><i class="bi bi-lock-fill"></i> 256-bit SSL</span>
+          <span><i class="bi bi-shield-check"></i> 3D Secure hazır</span>
+          <span><i class="bi bi-lightning-charge"></i> Hızlı onay</span>
+        </div>
+
+        <button type="submit" form="checkout-form" class="btn-place-order checkout-pay-button" onclick="setAddressAction('place_order')">
           <i class="bi bi-shield-lock-fill"></i>
-          Siparişi Onayla
+          <span id="pay-button-total">{{ selected_installment.total|currency }}</span> Öde ve Siparişi Onayla
+        </button>
+
+        <button type="button" class="paytr-button" onclick="showPaytrUnavailable()">
+          <span><i class="bi bi-credit-card-2-front-fill"></i> PayTR ile Öde</span>
+          <small>Yakında aktif olacak</small>
         </button>
       </div>
-
     </div>
 
-    <!-- ── Right: Summary ── -->
     <div class="col-lg-5">
       <div class="order-summary">
         <p class="order-summary__title">Sipariş Özeti</p>
 
-        <!-- Items list -->
         <div style="margin-bottom:1rem; padding-bottom:.75rem; border-bottom:1.5px solid var(--border); max-height:300px; overflow-y:auto;">
           {% for item in cart.items.all %}
           <div class="checkout-summary-item">
             {% if item.product.image %}
-              <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
+              <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+              <div style="width:48px; height:48px; border-radius:var(--radius-xs); background:var(--bg); display:flex; align-items:center; justify-content:center; color:var(--text-light); flex-shrink:0; border:1px solid var(--border);" hidden>
+                <i class="bi bi-image"></i>
+              </div>
             {% else %}
               <div style="width:48px; height:48px; border-radius:var(--radius-xs); background:var(--bg); display:flex; align-items:center; justify-content:center; color:var(--text-light); flex-shrink:0; border:1px solid var(--border);">
                 <i class="bi bi-image"></i>
@@ -147,7 +350,6 @@
           {% endfor %}
         </div>
 
-        <!-- Totals -->
         <div class="order-summary__row">
           <span style="color:var(--text-muted);">Ara Toplam</span>
           <span style="font-weight:700;">{{ cart.total_price|currency }}</span>
@@ -156,7 +358,7 @@
         {% if discount_amount > 0 %}
         <div class="order-summary__row" style="color:var(--success);">
           <span>İndirim (Kupon)</span>
-          <span style="font-weight:700;">−{{ discount_amount|currency }}</span>
+          <span style="font-weight:700;">-{{ discount_amount|currency }}</span>
         </div>
         {% endif %}
 
@@ -165,45 +367,243 @@
           <span style="color:var(--success); font-weight:600;">Ücretsiz</span>
         </div>
 
+        <div class="order-summary__row" id="installment-summary-row">
+          <span style="color:var(--text-muted);">Taksit</span>
+          <span style="font-weight:700;" id="installment-summary-text">Tek çekim</span>
+        </div>
+
         <div class="order-summary__row order-summary__row--total">
           <span>Ödenecek Tutar</span>
-          <span class="order-summary__total-price">{{ final_total|currency }}</span>
+          <span class="order-summary__total-price" id="order-total-dynamic">{{ selected_installment.total|currency }}</span>
         </div>
-
-        <!-- Trust badges -->
-        <div style="display:flex; gap:1rem; margin-top:1.25rem; padding-top:1rem; border-top:1.5px solid var(--border);">
-          <div style="text-align:center; flex:1;">
-            <i class="bi bi-shield-check" style="color:var(--success); font-size:1.25rem; display:block; margin-bottom:.25rem;"></i>
-            <span style="font-size:.72rem; color:var(--text-muted); font-weight:600;">Güvenli</span>
-          </div>
-          <div style="text-align:center; flex:1;">
-            <i class="bi bi-truck" style="color:var(--primary-light); font-size:1.25rem; display:block; margin-bottom:.25rem;"></i>
-            <span style="font-size:.72rem; color:var(--text-muted); font-weight:600;">Ücretsiz Kargo</span>
-          </div>
-          <div style="text-align:center; flex:1;">
-            <i class="bi bi-arrow-repeat" style="color:var(--accent); font-size:1.25rem; display:block; margin-bottom:.25rem;"></i>
-            <span style="font-size:.72rem; color:var(--text-muted); font-weight:600;">Kolay İade</span>
-          </div>
-        </div>
-
       </div>
     </div>
-
   </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+{{ card_bin_prefixes|json_script:"card-bin-prefixes-data" }}
 <script>
+  const cardBinPrefixes = JSON.parse(document.getElementById('card-bin-prefixes-data')?.textContent || '[]');
+  const defaultInstallmentGroupId = '{{ default_installment_group_id }}';
+
+  function setAddressAction(action) {
+    const input = document.getElementById('{{ form.address_action.id_for_label }}');
+    if (input) input.value = action;
+  }
+
+  function fillAddressFromRadio(radio) {
+    const mapping = {
+      '{{ form.address_title.id_for_label }}': 'title',
+      '{{ form.shipping_recipient_name.id_for_label }}': 'recipient',
+      '{{ form.phone.id_for_label }}': 'phone',
+      '{{ form.shipping_city.id_for_label }}': 'city',
+      '{{ form.shipping_district.id_for_label }}': 'district',
+      '{{ form.shipping_postal_code.id_for_label }}': 'postal',
+      '{{ form.shipping_address.id_for_label }}': 'address'
+    };
+    Object.entries(mapping).forEach(([id, key]) => {
+      const field = document.getElementById(id);
+      if (field) field.value = radio.dataset[key] || '';
+    });
+    syncBillingFromShipping();
+  }
+
+  function deleteSelectedAddress() {
+    setAddressAction('delete_address');
+    return window.confirm('Seçili adres silinsin mi?');
+  }
+
+  function syncBillingType() {
+    const type = document.querySelector('input[name="{{ form.billing_type.html_name }}"]:checked')?.value;
+    document.getElementById('billing-individual-label')?.classList.toggle('is-active', type !== 'corporate');
+    document.getElementById('billing-corporate-label')?.classList.toggle('is-active', type === 'corporate');
+    document.querySelectorAll('.billing-corporate-field').forEach((el) => {
+      el.style.display = type === 'corporate' ? '' : 'none';
+    });
+  }
+
+  function syncBillingFromShipping() {
+    const same = document.getElementById('{{ form.billing_same_as_shipping.id_for_label }}');
+    if (!same || !same.checked) return;
+    const recipient = document.getElementById('{{ form.shipping_recipient_name.id_for_label }}')?.value || '';
+    const phone = document.getElementById('{{ form.phone.id_for_label }}')?.value || '';
+    const address = document.getElementById('{{ form.shipping_address.id_for_label }}')?.value || '';
+    const billingName = document.getElementById('{{ form.billing_full_name.id_for_label }}');
+    const billingPhone = document.getElementById('{{ form.billing_phone.id_for_label }}');
+    const billingAddress = document.getElementById('{{ form.billing_address.id_for_label }}');
+    if (billingName && !billingName.value) billingName.value = recipient;
+    if (billingPhone) billingPhone.value = phone;
+    if (billingAddress) billingAddress.value = address;
+  }
+
+  document.addEventListener('input', (event) => {
+    if (event.target.closest('#checkout-form')) syncBillingFromShipping();
+  });
+  document.addEventListener('DOMContentLoaded', () => {
+    syncBillingType();
+    syncBillingFromShipping();
+    const selectedGroup = document.getElementById('payment-card-group-input')?.value;
+    if (selectedGroup) {
+      syncInstallments(selectedGroup);
+    } else {
+      syncInstallmentSummary();
+    }
+    updateInstallmentsByCardNumber(document.getElementById('card-number')?.value.replace(/\D/g, '') || '');
+  });
+
+  function formatCurrency(value) {
+    const number = Number.parseFloat(value || 0);
+    return new Intl.NumberFormat('tr-TR', {
+      style: 'currency',
+      currency: 'TRY'
+    }).format(Number.isFinite(number) ? number : 0);
+  }
+
+  function syncInstallments(groupId) {
+    const groupInput = document.getElementById('payment-card-group-input');
+    if (groupInput) groupInput.value = groupId || groupInput.value;
+    document.querySelectorAll('[data-group-card]').forEach((card) => {
+      card.classList.toggle('is-active', card.dataset.groupCard === String(groupId));
+    });
+    document.querySelectorAll('[data-installment-group]').forEach((panel) => {
+      const visible = panel.dataset.installmentGroup === String(groupId);
+      panel.classList.toggle('is-visible', visible);
+      if (visible && !panel.querySelector('input[name="installment_count"]:checked')) {
+        const firstOption = panel.querySelector('input[name="installment_count"]');
+        if (firstOption) firstOption.checked = true;
+      }
+    });
+    syncInstallmentSummary();
+  }
+
+  function setInstallmentBoardLocked(locked) {
+    const board = document.getElementById('installment-board');
+    if (board) board.classList.toggle('is-locked', locked);
+  }
+
+  function findCardBinMatch(digits) {
+    if (digits.length < 6) return null;
+    return cardBinPrefixes.find((item) => digits.startsWith(item.prefix));
+  }
+
+  function setCardDetectionState(match, digits) {
+    const panel = document.getElementById('card-detection-panel');
+    const title = document.getElementById('card-detection-title');
+    const text = document.getElementById('card-detection-text');
+    if (!panel || !title || !text) return;
+
+    panel.classList.toggle('is-detected', Boolean(match));
+    panel.classList.toggle('is-waiting', !match && digits.length > 0 && digits.length < 6);
+
+    if (match) {
+      title.textContent = `${match.bank_name} kartı algılandı`;
+      text.textContent = 'Bu karta uygun taksit seçenekleri aşağıda güncellendi.';
+      return;
+    }
+
+    if (digits.length >= 6) {
+      title.textContent = 'Taksit seçenekleri hazır';
+      text.textContent = 'Kartın ilk 6 hanesi alındı; kategoriye uygun yasal limitler gösteriliyor.';
+      return;
+    }
+
+    title.textContent = 'Kart numaranızı girin';
+    text.textContent = 'İlk 6 hane tamamlanınca taksit seçenekleri otomatik açılır.';
+  }
+
+  function updateInstallmentsByCardNumber(digits) {
+    if (digits.length < 6) {
+      setCardDetectionState(null, digits);
+      setInstallmentBoardLocked(true);
+      const miniSummary = document.getElementById('installment-mini-summary');
+      const summary = document.getElementById('installment-summary-text');
+      if (miniSummary) miniSummary.textContent = 'Kart bekleniyor';
+      if (summary) summary.textContent = 'Kart bekleniyor';
+      return;
+    }
+
+    setInstallmentBoardLocked(false);
+    const match = findCardBinMatch(digits);
+    setCardDetectionState(match, digits);
+    if (match) {
+      syncInstallments(match.group_id);
+      return;
+    }
+
+    const fallbackGroup = defaultInstallmentGroupId || document.querySelector('[data-group-card]')?.dataset.groupCard;
+    if (fallbackGroup) syncInstallments(fallbackGroup);
+  }
+
+  function syncInstallmentSummary() {
+    const visiblePanel = document.querySelector('.installment-options.is-visible');
+    const selected = visiblePanel?.querySelector('input[name="installment_count"]:checked')
+      || document.querySelector('input[name="installment_count"]:checked');
+    if (!selected) return;
+
+    const count = Number.parseInt(selected.dataset.count || selected.value || '1', 10);
+    const total = selected.dataset.total || '{{ final_total }}';
+    const monthly = selected.dataset.monthly || total;
+    const rate = Number.parseFloat(selected.dataset.rate || '0');
+    const text = count <= 1
+      ? 'Tek çekim'
+      : `${count} taksit · ${formatCurrency(monthly)} / ay${rate > 0 ? ` · %${rate.toLocaleString('tr-TR')} vade` : ''}`;
+
+    const totalText = formatCurrency(total);
+    const summary = document.getElementById('installment-summary-text');
+    const miniSummary = document.getElementById('installment-mini-summary');
+    const orderTotal = document.getElementById('order-total-dynamic');
+    const payTotal = document.getElementById('pay-button-total');
+    if (summary) summary.textContent = text;
+    if (miniSummary) miniSummary.textContent = text;
+    if (orderTotal) orderTotal.textContent = totalText;
+    if (payTotal) payTotal.textContent = totalText;
+  }
+
+  function detectCardBrand(number) {
+    if (/^4/.test(number)) return 'Visa';
+    if (/^5[1-5]/.test(number) || /^2[2-7]/.test(number)) return 'Mastercard';
+    if (/^3[47]/.test(number)) return 'Amex';
+    return 'CoreCard';
+  }
+
+  function syncCardPreview() {
+    const nameInput = document.getElementById('card-name');
+    const numberInput = document.getElementById('card-number');
+    const expiryInput = document.getElementById('card-expiry');
+    const previewName = document.getElementById('card-preview-name');
+    const previewNumber = document.getElementById('card-preview-number');
+    const previewExpiry = document.getElementById('card-preview-expiry');
+    const brand = document.getElementById('card-brand');
+    if (!numberInput || !previewNumber) return;
+    const digits = numberInput.value.replace(/\D/g, '');
+    previewNumber.textContent = numberInput.value || '0000 0000 0000 0000';
+    previewName.textContent = (nameInput.value || 'AD SOYAD').toUpperCase();
+    previewExpiry.textContent = expiryInput.value || 'AA/YY';
+    brand.textContent = detectCardBrand(digits);
+    updateInstallmentsByCardNumber(digits);
+  }
+
   function formatCardNumber(input) {
     let val = input.value.replace(/\D/g, '').substring(0, 16);
-    input.value = val.replace(/(.{4})/g, '$1  ').trim();
+    input.value = val.replace(/(.{4})/g, '$1 ').trim();
+    syncCardPreview();
   }
 
   function formatExpiry(input) {
     let val = input.value.replace(/\D/g, '').substring(0, 4);
-    if (val.length >= 3) val = val.slice(0, 2) + ' / ' + val.slice(2);
+    if (val.length >= 3) val = val.slice(0, 2) + '/' + val.slice(2);
     input.value = val;
+    syncCardPreview();
+  }
+
+  function formatCvc(input) {
+    input.value = input.value.replace(/\D/g, '').substring(0, 4);
+  }
+
+  function showPaytrUnavailable() {
+    alert('PayTR ödeme altyapısı şu anda demo modda. Entegrasyon bilgileri tanımlandıktan sonra aktif edilecek.');
   }
 </script>
 {% endblock %}
