@@ -225,12 +225,12 @@
             <!-- Custom Navigation Tabs -->
             <ul class="nav nav-pills premium-tabs" id="profileTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders-tab-pane" type="button" role="tab">
+                    <button class="nav-link {% if active_tab == 'orders' %}active{% endif %}" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders-tab-pane" type="button" role="tab" aria-controls="orders-tab-pane" aria-selected="{% if active_tab == 'orders' %}true{% else %}false{% endif %}">
                         <i class="bi bi-box-seam me-2"></i>Sipariş Geçmişim
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit-tab-pane" type="button" role="tab">
+                    <button class="nav-link {% if active_tab == 'account' %}active{% endif %}" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit-tab-pane" type="button" role="tab" aria-controls="edit-tab-pane" aria-selected="{% if active_tab == 'account' %}true{% else %}false{% endif %}">
                         <i class="bi bi-person-lines-fill me-2"></i>Hesap Ayarları
                     </button>
                 </li>
@@ -238,7 +238,7 @@
             
             <div class="tab-content" id="profileTabsContent">
                 <!-- Orders Tab -->
-                <div class="tab-pane fade show active" id="orders-tab-pane" role="tabpanel" tabindex="0">
+                <div class="tab-pane fade {% if active_tab == 'orders' %}show active{% endif %}" id="orders-tab-pane" role="tabpanel" aria-labelledby="orders-tab" tabindex="0">
                     {% if orders %}
                         <div class="d-flex flex-column gap-3">
                             {% for order in orders %}
@@ -291,9 +291,9 @@
                                         <span class="text-muted small d-block">Ödenen Tutar</span>
                                         <span class="fw-bold text-primary fs-5">{{ order.total_amount|currency }}</span>
                                     </div>
-                                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                                    <a href="{% url 'store:order_success' order.id %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
                                         Detayları Gör
-                                    </button>
+                                    </a>
                                 </div>
                             </div>
                             {% endfor %}
@@ -309,7 +309,7 @@
                 </div>
                 
                 <!-- Edit Profile Tab -->
-                <div class="tab-pane fade" id="edit-tab-pane" role="tabpanel" tabindex="0">
+                <div class="tab-pane fade {% if active_tab == 'account' %}show active{% endif %}" id="edit-tab-pane" role="tabpanel" aria-labelledby="edit-tab" tabindex="0">
                     <div class="bg-white p-4 p-md-5 rounded-4 shadow-sm border border-light">
                         <div class="mb-4 pb-3 border-bottom">
                             <h5 class="fw-bold text-primary"><i class="bi bi-person-gear me-2"></i>Kişisel Bilgiler</h5>
@@ -372,4 +372,19 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('#profileTabs [data-bs-toggle="tab"]').forEach(function (tabButton) {
+            tabButton.addEventListener('click', function () {
+                const tabName = tabButton.id === 'edit-tab' ? 'account' : 'orders';
+                const nextUrl = new URL(window.location.href);
+                nextUrl.searchParams.set('tab', tabName);
+                window.history.replaceState({}, '', nextUrl.toString());
+            });
+        });
+    });
+</script>
 {% endblock %}

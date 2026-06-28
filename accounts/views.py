@@ -26,6 +26,10 @@ SESSION_2FA_PURPOSE = 'email_2fa_purpose'
 SESSION_2FA_NEXT = 'email_2fa_next'
 SESSION_2FA_LAST_SENT = 'email_2fa_last_sent'
 
+EMAIL_2FA_SENT = 'sent'
+EMAIL_2FA_THROTTLED = 'throttled'
+EMAIL_2FA_FAILED = 'failed'
+
 
 def get_safe_next_url(request, fallback='store:home'):
     next_url = request.POST.get('next') or request.GET.get('next')
@@ -65,7 +69,7 @@ def send_email_2fa_code(request, user, purpose):
     if last_sent:
         elapsed = timezone.now().timestamp() - float(last_sent)
         if elapsed < 60:
-            return False
+            return EMAIL_2FA_THROTTLED
 
     token, code = create_email_2fa_code(user, purpose)
     subject = 'CoreLogic Store doğrulama kodunuz'
@@ -92,12 +96,12 @@ def send_email_2fa_code(request, user, purpose):
             'Doğrulama e-postası gönderilemedi. Lütfen kısa süre sonra tekrar deneyin '
             'veya site yöneticisiyle iletişime geçin.',
         )
-        return False
+        return EMAIL_2FA_FAILED
 
     request.session[SESSION_2FA_LAST_SENT] = str(timezone.now().timestamp())
     if settings.EMAIL_2FA_SHOW_DEBUG_CODE:
         messages.info(request, f'Geliştirme doğrulama kodu: {code}')
-    return True
+    return EMAIL_2FA_SENT
 
 
 def start_email_2fa(request, user, purpose, next_url):
@@ -105,7 +109,7 @@ def start_email_2fa(request, user, purpose, next_url):
     request.session[SESSION_2FA_PURPOSE] = purpose
     request.session[SESSION_2FA_NEXT] = next_url
     request.session.pop(SESSION_2FA_LAST_SENT, None)
-    if not send_email_2fa_code(request, user, purpose):
+    if send_email_2fa_code(request, user, purpose) != EMAIL_2FA_SENT:
         for key in (SESSION_2FA_USER_ID, SESSION_2FA_PURPOSE, SESSION_2FA_NEXT, SESSION_2FA_LAST_SENT):
             request.session.pop(key, None)
         return redirect('accounts:login')
@@ -120,8 +124,10 @@ def register_view(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            messages.info(request, 'Hesabınızı tamamlamak için e-postanıza gönderilen kodu girin.')
-            return start_email_2fa(request, user, EmailTwoFactorCode.PURPOSE_REGISTER, reverse('store:home'))
+            response = start_email_2fa(request, user, EmailTwoFactorCode.PURPOSE_REGISTER, reverse('store:home'))
+            if response.url == reverse('accounts:verify_email_2fa'):
+                messages.info(request, 'Hesabınızı tamamlamak için e-postanıza gönderilen kodu girin.')
+            return response
     else:
         form = CustomUserCreationForm()
     
@@ -137,8 +143,10 @@ def login_view(request):
             user = form.get_user()
             next_url = get_safe_next_url(request)
             if user.email_2fa_enabled:
-                messages.info(request, 'Güvenli giriş için e-postanıza doğrulama kodu gönderdik.')
-                return start_email_2fa(request, user, EmailTwoFactorCode.PURPOSE_LOGIN, next_url)
+                response = start_email_2fa(request, user, EmailTwoFactorCode.PURPOSE_LOGIN, next_url)
+                if response.url == reverse('accounts:verify_email_2fa'):
+                    messages.info(request, 'Güvenli giriş için e-postanıza doğrulama kodu gönderdik.')
+                return response
             login(request, user)
             messages.success(request, f'Hoş geldiniz, {user.username}!')
             return redirect(next_url)
@@ -210,9 +218,10 @@ def resend_email_2fa_view(request):
         return redirect('accounts:login')
 
     user = get_object_or_404(CustomUser, pk=user_id)
-    if send_email_2fa_code(request, user, purpose):
+    send_result = send_email_2fa_code(request, user, purpose)
+    if send_result == EMAIL_2FA_SENT:
         messages.success(request, 'Yeni doğrulama kodu e-postanıza gönderildi.')
-    else:
+    elif send_result == EMAIL_2FA_THROTTLED:
         messages.info(request, 'Yeni kod istemeden önce kısa bir süre bekleyin.')
     return redirect('accounts:verify_email_2fa')
 
@@ -228,9 +237,13 @@ def profile_view(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Profil bilgileriniz güncellendi.')
-            return redirect('accounts:profile')
+            return redirect(f'{reverse("accounts:profile")}?tab=account')
     else:
         form = ProfileUpdateForm(instance=request.user)
+
+    active_tab = request.GET.get('tab', 'orders')
+    if active_tab not in {'orders', 'account'}:
+        active_tab = 'orders'
         
     orders = request.user.orders.select_related(
         'shipment',
@@ -239,6 +252,7 @@ def profile_view(request):
     ).prefetch_related('shipment__events').order_by('-created_at')
     
     return render(request, 'accounts/profile.html', {
+        'active_tab': active_tab,
         'form': form,
-        'orders': orders
+        'orders': orders,
     })

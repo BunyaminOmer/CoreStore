@@ -71,8 +71,8 @@
                             <span class="d-none d-lg-inline">{{ user.first_name|default:user.username }}</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="bi bi-person me-2"></i>Profilim</a></li>
-                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="bi bi-box me-2"></i>Siparişlerim</a></li>
+                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}?tab=account"><i class="bi bi-person me-2"></i>Hesabım</a></li>
+                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}?tab=orders"><i class="bi bi-box me-2"></i>Siparişlerim</a></li>
                             {% if not user.is_vendor %}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{% url 'vendors:apply' %}"><i class="bi bi-shop me-2"></i>Satıcı Ol</a></li>
@@ -162,7 +162,11 @@
                     <h5 class="mb-3 text-white">Hızlı Linkler</h5>
                     <ul class="list-unstyled footer-links">
                         <li class="mb-2"><a href="{% url 'store:home' %}">Ana Sayfa</a></li>
+                        {% if user.is_authenticated %}
+                        <li class="mb-2"><a href="{% url 'accounts:profile' %}?tab=account">Hesabım</a></li>
+                        {% else %}
                         <li class="mb-2"><a href="{% url 'accounts:login' %}">Hesabım</a></li>
+                        {% endif %}
                         <li class="mb-2"><a href="{% url 'store:cart' %}">Sepetim</a></li>
                         <li class="mb-2"><a href="{% url 'vendors:apply' %}">Satıcı Ol</a></li>
                     </ul>
@@ -219,6 +223,9 @@
 
                 const dropdownToggle = event.target.closest('[data-bs-toggle="dropdown"]');
                 if (dropdownToggle) {
+                    if (window.bootstrap && bootstrap.Dropdown) {
+                        return;
+                    }
                     event.preventDefault();
                     const dropdown = dropdownToggle.closest('.dropdown');
                     const menu = dropdown ? dropdown.querySelector('.dropdown-menu') : null;
@@ -248,6 +255,9 @@
 
                 const collapseToggle = event.target.closest('[data-bs-toggle="collapse"]');
                 if (collapseToggle) {
+                    if (window.bootstrap && bootstrap.Collapse) {
+                        return;
+                    }
                     const targetSelector = collapseToggle.getAttribute('data-bs-target') || collapseToggle.getAttribute('href');
                     const target = targetSelector ? document.querySelector(targetSelector) : null;
                     if (target) {
@@ -260,6 +270,9 @@
 
                 const tabToggle = event.target.closest('[data-bs-toggle="tab"]');
                 if (tabToggle) {
+                    if (window.bootstrap && bootstrap.Tab) {
+                        return;
+                    }
                     event.preventDefault();
                     const targetSelector = tabToggle.getAttribute('data-bs-target') || tabToggle.getAttribute('href');
                     const target = targetSelector ? document.querySelector(targetSelector) : null;
