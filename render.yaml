@@ -23,7 +23,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: WEB_CONCURRENCY
-        value: 4
+        value: 1
       - key: DOMAIN
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
@@ -33,4 +33,4 @@ services:
       - key: CLOUDINARY_API_SECRET
         sync: false
       - key: REQUIRE_CLOUDINARY
-        value: "True"
+        value: "False"
