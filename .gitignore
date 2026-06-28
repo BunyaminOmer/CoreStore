@@ -21,6 +21,9 @@ staticfiles/
 # Logs
 *.log
 
+# Generated imports/exports
+outputs/
+
 # IDE
 .idea/
 .vscode/

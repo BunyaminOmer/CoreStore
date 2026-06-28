@@ -5,7 +5,12 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        var ctx = document.getElementById('salesChart').getContext('2d');
+        var chartCanvas = document.getElementById('salesChart');
+        if (!chartCanvas || typeof Chart === 'undefined') {
+            return;
+        }
+
+        var ctx = chartCanvas.getContext('2d');
         var salesLabels = JSON.parse('{{ sales_labels|safe }}');
         var salesData = JSON.parse('{{ sales_data|safe }}');
 

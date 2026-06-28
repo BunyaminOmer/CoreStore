@@ -1,9 +1,16 @@
 import re
+import smtplib
 
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.core.mail.backends.base import BaseEmailBackend
 from django.test import TestCase, override_settings
 from django.urls import reverse
+
+
+class FailingEmailBackend(BaseEmailBackend):
+    def send_messages(self, email_messages):
+        raise smtplib.SMTPException('SMTP unavailable')
 
 
 @override_settings(
@@ -60,3 +67,14 @@ class EmailTwoFactorTests(TestCase):
         new_user = get_user_model().objects.get(username='newcustomer')
         self.assertEqual(int(self.client.session['_auth_user_id']), new_user.pk)
         self.assertIsNotNone(new_user.email_verified_at)
+
+    @override_settings(EMAIL_BACKEND='accounts.tests.FailingEmailBackend')
+    def test_login_email_send_failure_returns_to_login(self):
+        response = self.client.post(reverse('accounts:login'), {
+            'username': 'customer',
+            'password': 'StrongPass123!',
+        })
+
+        self.assertRedirects(response, reverse('accounts:login'))
+        self.assertNotIn('_auth_user_id', self.client.session)
+        self.assertNotIn('email_2fa_user_id', self.client.session)

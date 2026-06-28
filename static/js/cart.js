@@ -1,6 +1,8 @@
 // Show toast notification
 function showToast(message, type = 'success') {
     const toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) return;
+
     const toastId = 'toast-' + Date.now();
     const bgClass = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-primary');
     
@@ -18,8 +20,14 @@ function showToast(message, type = 'success') {
     
     toastContainer.insertAdjacentHTML('beforeend', toastHTML);
     const toastElement = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
-    toast.show();
+
+    if (window.bootstrap && bootstrap.Toast) {
+        const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+        toast.show();
+    } else {
+        toastElement.classList.add('show');
+        setTimeout(() => toastElement.remove(), 3000);
+    }
     
     // Remove from DOM after hidden
     toastElement.addEventListener('hidden.bs.toast', () => {

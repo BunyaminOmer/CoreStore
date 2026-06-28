@@ -1,5 +1,7 @@
 import hashlib
+import logging
 import secrets
+import smtplib
 from datetime import timedelta
 
 from django.conf import settings
@@ -16,6 +18,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from .forms import CustomUserCreationForm, EmailTwoFactorForm, ProfileUpdateForm
 from .models import CustomUser, EmailTwoFactorCode
 
+
+logger = logging.getLogger(__name__)
 
 SESSION_2FA_USER_ID = 'email_2fa_user_id'
 SESSION_2FA_PURPOSE = 'email_2fa_purpose'
@@ -71,13 +75,25 @@ def send_email_2fa_code(request, user, purpose):
         'Bu kod 10 dakika geçerlidir.\n\n'
         'Bu işlemi siz başlatmadıysanız bu e-postayı yok sayabilirsiniz.'
     )
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [token.sent_to],
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [token.sent_to],
+            fail_silently=False,
+        )
+    except (smtplib.SMTPException, OSError, TimeoutError) as exc:
+        token.used_at = timezone.now()
+        token.save(update_fields=['used_at'])
+        logger.exception('Email 2FA code could not be sent to %s.', token.sent_to)
+        messages.error(
+            request,
+            'Doğrulama e-postası gönderilemedi. Lütfen kısa süre sonra tekrar deneyin '
+            'veya site yöneticisiyle iletişime geçin.',
+        )
+        return False
+
     request.session[SESSION_2FA_LAST_SENT] = str(timezone.now().timestamp())
     if settings.EMAIL_2FA_SHOW_DEBUG_CODE:
         messages.info(request, f'Geliştirme doğrulama kodu: {code}')
@@ -89,7 +105,10 @@ def start_email_2fa(request, user, purpose, next_url):
     request.session[SESSION_2FA_PURPOSE] = purpose
     request.session[SESSION_2FA_NEXT] = next_url
     request.session.pop(SESSION_2FA_LAST_SENT, None)
-    send_email_2fa_code(request, user, purpose)
+    if not send_email_2fa_code(request, user, purpose):
+        for key in (SESSION_2FA_USER_ID, SESSION_2FA_PURPOSE, SESSION_2FA_NEXT, SESSION_2FA_LAST_SENT):
+            request.session.pop(key, None)
+        return redirect('accounts:login')
     return redirect('accounts:verify_email_2fa')
 
 

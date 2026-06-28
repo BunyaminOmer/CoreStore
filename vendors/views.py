@@ -1,7 +1,13 @@
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
+import mimetypes
+from pathlib import Path
 import unicodedata
+import urllib.error
+import urllib.parse
+import urllib.request
 
+from django.core.files.base import ContentFile
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -47,9 +53,19 @@ BULK_COLUMN_ALIASES = {
     'category': {'kategori', 'kategori_slug', 'kategori_id', 'category', 'category_slug', 'category_id'},
     'description': {'aciklama', 'description', 'detay'},
     'price': {'fiyat', 'satis_fiyati', 'price', 'normal_fiyat'},
+    'supplier_price': {'tedarik_fiyati', 'alis_fiyati', 'supplier_price', 'maliyet'},
+    'margin_rate': {'kar_marji', 'margin_rate', 'kar_orani'},
+    'pricing_note': {'fiyat_bilgisi', 'pricing_note', 'fiyat_notu'},
     'discount_price': {'indirimli_fiyat', 'discount_price', 'kampanya_fiyati'},
     'stock': {'stok', 'stock', 'adet'},
     'is_active': {'aktif', 'is_active', 'yayinda'},
+    'image_url': {'gorsel_url', 'resim_url', 'image_url', 'urun_gorseli'},
+    'features': {'ozellikler', 'features', 'urun_ozellikleri'},
+    'technical_info': {'teknik_bilgi', 'technical_info', 'teknik_ozellikler'},
+    'brand': {'marka', 'brand'},
+    'product_code': {'urun_kodu', 'product_code', 'sku'},
+    'gtin': {'gtin', 'barkod', 'barcode'},
+    'source_url': {'kaynak_url', 'source_url', 'urun_linki'},
 }
 
 
@@ -135,6 +151,82 @@ def parse_bulk_bool(value, default=True):
     return text in {'1', 'true', 'evet', 'aktif', 'yayinda', 'yayında', 'yes', 'y'}
 
 
+def build_bulk_description(row, column_map):
+    sections = []
+    description = str(bulk_cell(row, column_map, 'description', '') or '').strip()
+    if description:
+        sections.append(description)
+
+    details = [
+        ('Ürün Özellikleri', bulk_cell(row, column_map, 'features', '')),
+        ('Teknik Bilgi', bulk_cell(row, column_map, 'technical_info', '')),
+    ]
+    for title, value in details:
+        value = str(value or '').strip()
+        if value:
+            sections.append(f'{title}\n{value}')
+
+    pricing_lines = []
+    supplier_price = bulk_cell(row, column_map, 'supplier_price', '')
+    margin_rate = bulk_cell(row, column_map, 'margin_rate', '')
+    pricing_note = str(bulk_cell(row, column_map, 'pricing_note', '') or '').strip()
+    if supplier_price not in (None, ''):
+        pricing_lines.append(f'Tedarik fiyatı: {supplier_price} TL')
+    if margin_rate not in (None, ''):
+        try:
+            margin_percent = Decimal(str(margin_rate)) * Decimal('100')
+            pricing_lines.append(f'Kar marjı: %{margin_percent.quantize(Decimal("1"))}')
+        except (InvalidOperation, ValueError):
+            pricing_lines.append(f'Kar marjı: {margin_rate}')
+    if pricing_note:
+        pricing_lines.append(pricing_note)
+    if pricing_lines:
+        sections.append('Fiyat Bilgisi\n' + '\n'.join(pricing_lines))
+
+    meta_lines = []
+    for label, key in (
+        ('Marka', 'brand'),
+        ('Ürün Kodu', 'product_code'),
+        ('GTIN', 'gtin'),
+        ('Kaynak', 'source_url'),
+    ):
+        value = str(bulk_cell(row, column_map, key, '') or '').strip()
+        if value:
+            meta_lines.append(f'{label}: {value}')
+    if meta_lines:
+        sections.append('Kaynak ve Ürün Bilgileri\n' + '\n'.join(meta_lines))
+
+    return '\n\n'.join(sections)
+
+
+def download_bulk_image(image_url):
+    image_url = str(image_url or '').strip()
+    if not image_url:
+        return None
+
+    parsed = urllib.parse.urlparse(image_url)
+    if parsed.scheme not in {'http', 'https'}:
+        return None
+
+    request = urllib.request.Request(
+        image_url,
+        headers={'User-Agent': 'Mozilla/5.0 CoreLogicStoreBulkImporter/1.0'},
+    )
+    with urllib.request.urlopen(request, timeout=15) as response:
+        content_type = response.headers.get_content_type()
+        if not content_type.startswith('image/'):
+            return None
+        content = response.read(6 * 1024 * 1024)
+        if len(content) >= 6 * 1024 * 1024:
+            raise ValueError('Görsel dosyası çok büyük.')
+
+    extension = mimetypes.guess_extension(content_type) or '.jpg'
+    if extension == '.jpe':
+        extension = '.jpg'
+    filename_base = slugify(Path(parsed.path).stem or 'urun-gorseli')[:80] or 'urun-gorseli'
+    return f'{filename_base}{extension}', ContentFile(content)
+
+
 def find_bulk_category(value):
     if value in (None, ''):
         raise ValueError('Kategori boş bırakılamaz.')
@@ -205,7 +297,7 @@ def process_bulk_product_upload(vendor, uploaded_file, update_existing=False, de
                     raise ValueError('Ürün adı boş bırakılamaz.')
 
                 category = find_bulk_category(bulk_cell(row, column_map, 'category'))
-                description = str(bulk_cell(row, column_map, 'description', '') or '').strip()
+                description = build_bulk_description(row, column_map)
                 price = parse_bulk_decimal(bulk_cell(row, column_map, 'price'), 'Fiyat')
                 discount_price = parse_bulk_decimal(
                     bulk_cell(row, column_map, 'discount_price', ''),
@@ -241,6 +333,19 @@ def process_bulk_product_upload(vendor, uploaded_file, update_existing=False, de
                 product.discount_price = discount_price
                 product.stock = stock
                 product.is_active = is_active
+                image_url = bulk_cell(row, column_map, 'image_url', '')
+                if image_url and (not product.image or update_existing):
+                    try:
+                        image_payload = download_bulk_image(image_url)
+                    except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+                        image_payload = None
+                        result['errors'].append({
+                            'row': row_number,
+                            'message': f'Görsel indirilemedi, ürün görselsiz aktarıldı: {exc}',
+                        })
+                    if image_payload:
+                        filename, content = image_payload
+                        product.image.save(filename, content, save=False)
                 product.save()
 
                 result[action] += 1
@@ -521,9 +626,19 @@ def vendor_bulk_upload_template_view(request):
         'Kategori',
         'Açıklama',
         'Fiyat',
+        'Tedarik Fiyatı',
+        'Kar Marjı',
+        'Fiyat Bilgisi',
         'İndirimli Fiyat',
         'Stok',
         'Aktif',
+        'Görsel URL',
+        'Özellikler',
+        'Teknik Bilgi',
+        'Marka',
+        'Ürün Kodu',
+        'GTIN',
+        'Kaynak URL',
     ]
     sheet.append(headers)
     sheet.append([
@@ -531,21 +646,41 @@ def vendor_bulk_upload_template_view(request):
         'Elektronik',
         'Kısa ürün açıklaması',
         '1299.90',
+        '899.90',
+        '0.50',
+        'Tedarik fiyatı ve kar marjı açıklamaya eklenir.',
         '999.90',
         '25',
         'evet',
+        'https://example.com/gorsel.jpg',
+        'Bluetooth 5.3\nAktif gürültü azaltma',
+        'Pil: 30 saat',
+        'Örnek Marka',
+        'SKU-001',
+        '',
+        'https://example.com/urun',
     ])
     sheet.append([
         'Örnek Telefon Kılıfı',
         'Aksesuar',
         'Kategori adı, slug veya kategori id yazabilirsiniz.',
         '249.90',
+        '178.50',
+        '0.40',
+        '',
         '',
         '100',
         'evet',
+        '',
+        'Esnek silikon\nTam koruma',
+        '',
+        '',
+        '',
+        '',
+        '',
     ])
 
-    widths = [28, 22, 48, 14, 18, 10, 12]
+    widths = [28, 22, 48, 14, 16, 12, 36, 18, 10, 12, 42, 36, 36, 18, 18, 16, 42]
     for index, width in enumerate(widths, start=1):
         sheet.column_dimensions[chr(64 + index)].width = width
 

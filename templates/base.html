@@ -204,6 +204,107 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Local interaction fallback -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.addEventListener('click', function (event) {
+                const closeButton = event.target.closest('[data-bs-dismiss="alert"]');
+                if (closeButton) {
+                    const alert = closeButton.closest('.alert');
+                    if (alert) {
+                        alert.remove();
+                    }
+                }
+
+                const dropdownToggle = event.target.closest('[data-bs-toggle="dropdown"]');
+                if (dropdownToggle) {
+                    event.preventDefault();
+                    const dropdown = dropdownToggle.closest('.dropdown');
+                    const menu = dropdown ? dropdown.querySelector('.dropdown-menu') : null;
+                    const wasOpen = menu && menu.classList.contains('show');
+
+                    document.querySelectorAll('.dropdown-menu.show').forEach(function (openMenu) {
+                        if (openMenu !== menu) {
+                            openMenu.classList.remove('show');
+                            const parent = openMenu.closest('.dropdown');
+                            if (parent) {
+                                parent.classList.remove('show');
+                                const toggle = parent.querySelector('[data-bs-toggle="dropdown"]');
+                                if (toggle) {
+                                    toggle.setAttribute('aria-expanded', 'false');
+                                }
+                            }
+                        }
+                    });
+
+                    if (menu) {
+                        menu.classList.toggle('show', !wasOpen);
+                        dropdown.classList.toggle('show', !wasOpen);
+                        dropdownToggle.setAttribute('aria-expanded', String(!wasOpen));
+                    }
+                    return;
+                }
+
+                const collapseToggle = event.target.closest('[data-bs-toggle="collapse"]');
+                if (collapseToggle) {
+                    const targetSelector = collapseToggle.getAttribute('data-bs-target') || collapseToggle.getAttribute('href');
+                    const target = targetSelector ? document.querySelector(targetSelector) : null;
+                    if (target) {
+                        const willOpen = !target.classList.contains('show');
+                        target.classList.toggle('show', willOpen);
+                        collapseToggle.setAttribute('aria-expanded', String(willOpen));
+                    }
+                    return;
+                }
+
+                const tabToggle = event.target.closest('[data-bs-toggle="tab"]');
+                if (tabToggle) {
+                    event.preventDefault();
+                    const targetSelector = tabToggle.getAttribute('data-bs-target') || tabToggle.getAttribute('href');
+                    const target = targetSelector ? document.querySelector(targetSelector) : null;
+                    const tabList = tabToggle.closest('[role="tablist"], .nav');
+                    const tabContent = target ? target.closest('.tab-content') : null;
+
+                    if (!target) {
+                        return;
+                    }
+
+                    if (tabList) {
+                        tabList.querySelectorAll('[data-bs-toggle="tab"]').forEach(function (tab) {
+                            tab.classList.remove('active');
+                            tab.setAttribute('aria-selected', 'false');
+                        });
+                    }
+
+                    if (tabContent) {
+                        tabContent.querySelectorAll('.tab-pane').forEach(function (pane) {
+                            pane.classList.remove('active', 'show');
+                        });
+                    }
+
+                    tabToggle.classList.add('active');
+                    tabToggle.setAttribute('aria-selected', 'true');
+                    target.classList.add('active', 'show');
+                    return;
+                }
+
+                if (!event.target.closest('.dropdown')) {
+                    document.querySelectorAll('.dropdown-menu.show').forEach(function (openMenu) {
+                        openMenu.classList.remove('show');
+                        const parent = openMenu.closest('.dropdown');
+                        if (parent) {
+                            parent.classList.remove('show');
+                            const toggle = parent.querySelector('[data-bs-toggle="dropdown"]');
+                            if (toggle) {
+                                toggle.setAttribute('aria-expanded', 'false');
+                            }
+                        }
+                    });
+                }
+            });
+        });
+    </script>
     
     <!-- CSRF Token helper -->
     <script>

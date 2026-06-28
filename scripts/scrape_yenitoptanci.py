@@ -5,11 +5,13 @@ import csv
 import html
 import json
 import re
+import socket
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from decimal import Decimal, ROUND_CEILING, ROUND_HALF_UP
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -66,6 +68,55 @@ def parse_int(value: str):
     return int(digits) if digits else None
 
 
+def normalize_image_url(value: str) -> str:
+    value = html.unescape(value or '').strip()
+    if not value:
+        return ''
+    return urllib.parse.urljoin(BASE_URL, value)
+
+
+def round_try(amount: Decimal) -> Decimal:
+    rounded_whole = amount.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+    next_ten = (rounded_whole / Decimal('10')).to_integral_value(rounding=ROUND_CEILING) * Decimal('10')
+    if next_ten - rounded_whole <= Decimal('2'):
+        return next_ten.quantize(Decimal('0.01'))
+    return rounded_whole.quantize(Decimal('0.01'))
+
+
+def calculate_pricing(raw_price) -> dict:
+    if raw_price in (None, ''):
+        return {
+            'supplier_price': None,
+            'margin_rate': None,
+            'selling_price': None,
+            'pricing_note': 'Fiyat bulunamadı',
+        }
+
+    supplier_price = Decimal(str(raw_price)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    if supplier_price < Decimal('150'):
+        margin_rate = Decimal('0.20')
+    elif supplier_price < Decimal('450'):
+        margin_rate = Decimal('0.40')
+    else:
+        margin_rate = Decimal('0.50')
+
+    calculated_price = (supplier_price * (Decimal('1') + margin_rate)).quantize(
+        Decimal('0.01'),
+        rounding=ROUND_HALF_UP,
+    )
+    selling_price = round_try(calculated_price)
+    return {
+        'supplier_price': float(supplier_price),
+        'margin_rate': float(margin_rate),
+        'selling_price': float(selling_price),
+        'pricing_note': (
+            f'Tedarik fiyatı: {supplier_price} TL | '
+            f'Kar marjı: %{int(margin_rate * 100)} | '
+            f'Hesaplanan satış fiyatı: {selling_price} TL'
+        ),
+    }
+
+
 def request_text(url: str, data: dict | None = None, retries: int = 3) -> str:
     encoded = None
     headers = dict(HEADERS)
@@ -78,7 +129,7 @@ def request_text(url: str, data: dict | None = None, retries: int = 3) -> str:
         try:
             with urllib.request.urlopen(req, timeout=25) as response:
                 return response.read().decode('utf-8', errors='replace')
-        except (urllib.error.URLError, TimeoutError) as exc:
+        except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
             last_error = exc
             time.sleep(0.8 * (attempt + 1))
     raise RuntimeError(f'İstek başarısız: {url} ({last_error})')
@@ -103,6 +154,7 @@ def fetch_list_page(page: int) -> str:
 
 
 def extract_max_page(list_html: str) -> int:
+    list_html = html.unescape(list_html or '')
     pages = [int(match) for match in re.findall(r'[?&]page=([0-9]+)', list_html)]
     return max(pages) if pages else 1
 
@@ -123,11 +175,9 @@ def parse_list_products(list_html: str) -> list[dict]:
             'source_product_id': id_match.group(1) if id_match else '',
             'name': clean_text(name_match.group(1)),
             'source_category': clean_text(category_match.group(1)) if category_match else '',
-            'image_url': html.unescape(img_match.group(1)).replace('//', '/') if img_match else '',
+            'image_url': normalize_image_url(img_match.group(1)) if img_match else '',
             'source_url': urllib.parse.urljoin(BASE_URL, detail_path),
         })
-        if products[-1]['image_url'].startswith('https:/') and not products[-1]['image_url'].startswith('https://'):
-            products[-1]['image_url'] = products[-1]['image_url'].replace('https:/', 'https://', 1)
     return products
 
 
@@ -157,17 +207,24 @@ def parse_detail_page(product: dict) -> dict:
     feature_items = [clean_text(item) for item in re.findall(r'<li>(.*?)</li>', desc_html, re.S)]
     all_images = []
     for image_url in re.findall(r'<div class="swiper-slide">\s*<img src="([^"]+)"', text, re.S):
-        image_url = html.unescape(image_url).replace('//', '/')
-        if image_url.startswith('https:/') and not image_url.startswith('https://'):
-            image_url = image_url.replace('https:/', 'https://', 1)
+        image_url = normalize_image_url(image_url)
         if image_url not in all_images:
             all_images.append(image_url)
 
+    raw_price = float(price_match.group(1)) if price_match else (float(value_match.group(1)) if value_match else None)
+    pricing = calculate_pricing(raw_price)
+    description_parts = [description]
+    if pricing['pricing_note']:
+        description_parts.append(f"Fiyat Bilgisi\n{pricing['pricing_note']}")
+
     return {
         **product,
-        'price': float(price_match.group(1)) if price_match else (float(value_match.group(1)) if value_match else None),
+        'supplier_price': pricing['supplier_price'],
+        'margin_rate': pricing['margin_rate'],
+        'price': pricing['selling_price'],
+        'pricing_note': pricing['pricing_note'],
         'stock': parse_int(stock_match.group(1)) if stock_match else None,
-        'description': description,
+        'description': '\n\n'.join(part for part in description_parts if part),
         'features': '\n'.join(feature_items),
         'technical_info': '\n'.join(info_lines),
         'brand': html.unescape(brand_match.group(1)) if brand_match else '',
@@ -210,30 +267,90 @@ def map_category(row: dict) -> str:
     return 'Ev & Yaşam'
 
 
-def scrape(max_pages: int | None, max_details: int | None, workers: int) -> list[dict]:
-    first = fetch_list_page(1)
-    total_pages = extract_max_page(first)
-    if max_pages:
-        total_pages = min(total_pages, max_pages)
+def load_partial_rows(path: Path | None) -> dict[str, dict]:
+    if not path or not path.exists():
+        return {}
 
-    print(f'Liste sayfası: 1/{total_pages}')
-    list_products = parse_list_products(first)
-    for page in range(2, total_pages + 1):
-        print(f'Liste sayfası: {page}/{total_pages}')
-        list_products.extend(parse_list_products(fetch_list_page(page)))
-        time.sleep(0.1)
+    rows = {}
+    with path.open('r', encoding='utf-8') as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if row.get('scrape_error') and row.get('price') in (None, ''):
+                continue
+            source_url = row.get('source_url')
+            if source_url:
+                rows[source_url] = row
+    return rows
+
+
+def scrape(
+    max_pages: int | None,
+    max_details: int | None,
+    workers: int,
+    list_json_out: Path | None = None,
+    resume_list_json: Path | None = None,
+    partial_jsonl_out: Path | None = None,
+) -> list[dict]:
+    if resume_list_json and resume_list_json.exists():
+        list_products = json.loads(resume_list_json.read_text(encoding='utf-8'))
+        print(f'Liste cache kullanıldı: {len(list_products)} ürün', flush=True)
+    else:
+        first = fetch_list_page(1)
+        total_pages = extract_max_page(first)
+        if max_pages:
+            total_pages = min(total_pages, max_pages)
+
+        print(f'Liste sayfası: 1/{total_pages}', flush=True)
+        list_products = parse_list_products(first)
+        for page in range(2, total_pages + 1):
+            print(f'Liste sayfası: {page}/{total_pages}', flush=True)
+            list_products.extend(parse_list_products(fetch_list_page(page)))
+            if list_json_out:
+                list_json_out.parent.mkdir(parents=True, exist_ok=True)
+                current_unique = {}
+                for item in list_products:
+                    current_unique[item['source_url']] = item
+                list_json_out.write_text(
+                    json.dumps(list(current_unique.values()), ensure_ascii=False, indent=2),
+                    encoding='utf-8',
+                )
+            time.sleep(0.1)
 
     unique = {}
     for item in list_products:
         unique[item['source_url']] = item
     list_products = list(unique.values())
+    if list_json_out:
+        list_json_out.parent.mkdir(parents=True, exist_ok=True)
+        list_json_out.write_text(json.dumps(list_products, ensure_ascii=False, indent=2), encoding='utf-8')
+        print(f'Liste cache yazıldı: {list_json_out} ({len(list_products)} ürün)', flush=True)
+
     if max_details:
         list_products = list_products[:max_details]
-    print(f'Detay çekilecek ürün: {len(list_products)}')
+    print(f'Detay çekilecek ürün: {len(list_products)}', flush=True)
 
-    results = []
+    completed = load_partial_rows(partial_jsonl_out)
+    results = list(completed.values())
+    pending_products = [
+        product for product in list_products
+        if product.get('source_url') not in completed
+    ]
+    if completed:
+        print(f'Detay cache kullanıldı: {len(completed)} ürün tamam, {len(pending_products)} kaldı', flush=True)
+
+    partial_handle = None
+    if partial_jsonl_out:
+        partial_jsonl_out.parent.mkdir(parents=True, exist_ok=True)
+        partial_handle = partial_jsonl_out.open('a', encoding='utf-8')
+
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        future_map = {executor.submit(parse_detail_page, product): product for product in list_products}
+        future_map = {executor.submit(parse_detail_page, product): product for product in pending_products}
         for index, future in enumerate(as_completed(future_map), start=1):
             product = future_map[future]
             try:
@@ -258,8 +375,14 @@ def scrape(max_pages: int | None, max_details: int | None, workers: int) -> list
             row['is_active'] = 'Evet'
             row.setdefault('scrape_error', '')
             results.append(row)
-            if index % 25 == 0 or index == len(list_products):
-                print(f'Detay ilerleme: {index}/{len(list_products)}')
+            if partial_handle:
+                partial_handle.write(json.dumps(row, ensure_ascii=False) + '\n')
+                partial_handle.flush()
+            done_count = len(completed) + index
+            if index % 25 == 0 or done_count == len(list_products):
+                print(f'Detay ilerleme: {done_count}/{len(list_products)}', flush=True)
+    if partial_handle:
+        partial_handle.close()
     results.sort(key=lambda item: (item.get('category') or '', item.get('name') or ''))
     return results
 
@@ -271,15 +394,27 @@ def main():
     parser.add_argument('--workers', type=int, default=8)
     parser.add_argument('--json-out', required=True)
     parser.add_argument('--csv-out')
+    parser.add_argument('--list-json-out')
+    parser.add_argument('--resume-list-json')
+    parser.add_argument('--partial-jsonl-out')
     args = parser.parse_args()
 
-    rows = scrape(args.max_pages, args.max_details, args.workers)
+    rows = scrape(
+        args.max_pages,
+        args.max_details,
+        args.workers,
+        list_json_out=Path(args.list_json_out) if args.list_json_out else None,
+        resume_list_json=Path(args.resume_list_json) if args.resume_list_json else None,
+        partial_jsonl_out=Path(args.partial_jsonl_out) if args.partial_jsonl_out else None,
+    )
     Path(args.json_out).write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding='utf-8')
     if args.csv_out:
         fields = [
-            'name', 'category', 'description', 'price', 'discount_price', 'stock', 'is_active',
-            'image_url', 'source_category', 'features', 'technical_info', 'brand', 'product_code',
-            'gtin', 'category_path', 'all_image_urls', 'source_url', 'source_product_id', 'scrape_error',
+            'name', 'category', 'description', 'price', 'supplier_price', 'margin_rate',
+            'pricing_note', 'discount_price', 'stock', 'is_active', 'image_url',
+            'source_category', 'features', 'technical_info', 'brand', 'product_code',
+            'gtin', 'category_path', 'all_image_urls', 'source_url', 'source_product_id',
+            'scrape_error',
         ]
         with open(args.csv_out, 'w', newline='', encoding='utf-8') as handle:
             writer = csv.DictWriter(handle, fieldnames=fields)
@@ -287,7 +422,7 @@ def main():
             writer.writerows(rows)
     missing_price = sum(1 for row in rows if row.get('price') in (None, ''))
     missing_stock = sum(1 for row in rows if row.get('stock') in (None, ''))
-    print(f'Tamamlandı. Ürün: {len(rows)}, eksik fiyat: {missing_price}, eksik stok: {missing_stock}')
+    print(f'Tamamlandı. Ürün: {len(rows)}, eksik fiyat: {missing_price}, eksik stok: {missing_stock}', flush=True)
 
 
 if __name__ == '__main__':

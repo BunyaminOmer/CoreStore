@@ -274,6 +274,7 @@ EMAIL_BACKEND = os.environ.get(
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp-relay.brevo.com')
 EMAIL_PORT = env_int('EMAIL_PORT', default=587)
 EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', default=True)
+EMAIL_TIMEOUT = env_int('EMAIL_TIMEOUT', default=10)
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'CoreLogic Store <noreply@corelogic.store>')
