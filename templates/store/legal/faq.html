@@ -1,0 +1,155 @@
+{% extends 'store/legal/base_legal.html' %}
+
+{% block legal_content %}
+<h1>Sıkça Sorulan Sorular</h1>
+<p class="legal-meta">Son güncelleme: {{ legal.last_updated }}</p>
+
+<p>
+  {{ legal.platform_name }} hakkında en çok sorulan konuları aşağıda bulabilirsiniz.
+  Aradığınız yanıt yoksa <a href="{% url 'store:feedback' %}">Geri Bildirim</a> formunu kullanabilir
+  veya <a href="mailto:{{ legal.support_email }}">{{ legal.support_email }}</a> adresine yazabilirsiniz.
+</p>
+
+<div class="legal-faq-item">
+  <h2>{{ legal.platform_name }} nedir?</h2>
+  <p>
+    {{ legal.platform_name }}, birden fazla onaylı satıcının ürünlerini tek çatı altında sunduğu bir e-ticaret
+    pazar yeridir. Ürünleri inceleyebilir, sepete ekleyebilir, güvenli ödeme adımlarıyla sipariş oluşturabilir
+    ve {{ legal.shipping_partner }} kargo altyapısı ile teslimat sürecini takip edebilirsiniz.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Nasıl üye olurum?</h2>
+  <p>
+    Sağ üstteki “Kayıt Ol” bağlantısından e-posta adresiniz ve parolanızla ücretsiz hesap oluşturabilirsiniz.
+    Giriş sırasında e-posta ile iki adımlı doğrulama (2FA) uygulanabilir; doğrulama kodu kayıtlı e-posta
+    adresinize gönderilir.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Sipariş vermek için üye olmam gerekir mi?</h2>
+  <p>
+    Sepete ürün ekleyebilirsiniz; ancak ödeme ve sipariş tamamlama adımları için giriş yapmanız gerekir.
+    Böylece sipariş geçmişiniz, teslimat adresleriniz ve iade/iptal talepleriniz hesabınızda saklanır.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Hangi ödeme yöntemlerini kullanabilirim?</h2>
+  <p>
+    Kredi/banka kartı ile ödeme ve taksit seçenekleri sunulmaktadır. Kartınızın ilk 6 hanesine göre uygun
+    taksit planları checkout ekranında gösterilir. PayTR entegrasyonu planlanmaktadır; aktif olduğunda
+    checkout sayfasından kullanılabilecektir. Kapıda ödeme ve havale/EFT seçenekleri henüz aktif değildir.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Kargom ne zaman gelir?</h2>
+  <p>
+    Siparişiniz onaylandıktan sonra {{ legal.shipping_partner }} kargo sürecine alınır. Kargo durumunuzu
+    sipariş onay e-postanızdaki bilgilendirme linki, hesabınızdaki “Siparişlerim” bölümü veya kargo takip
+    numaranız ile izleyebilirsiniz. Teslimat süresi satıcının hazırlık süresi, mesafe ve kargo yoğunluğuna göre değişir.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Siparişimi nasıl iptal ederim?</h2>
+  <p>
+    Sipariş henüz kargoya verilmeden ve teslim edilmeden önce hesabınızdaki sipariş detayından veya sipariş
+    onay sayfasından “İptal Talebi” oluşturabilirsiniz. Onaylanan iptallerde ücret iadesi, ödeme yönteminize
+    göre banka/ödeme kuruluşu süreçlerinde gerçekleştirilir. Ayrıntılar için
+    <a href="{% url 'store:cancellation_policy' %}">İptal ve İade Koşulları</a> sayfasına bakın.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Ürün iadesi nasıl yapılır?</h2>
+  <p>
+    Mesafeli satışlarda cayma hakkınız, teslimattan itibaren {{ legal.withdrawal_days }} gün içinde kullanılabilir
+    (istisnalar hariç). Kargodaki veya teslim edilmiş siparişler için “İade Talebi” oluşturmanız gerekir.
+    Ürün, satıcının iade koşullarına uygun şekilde geri gönderilmelidir. Süreç ve istisnalar
+    <a href="{% url 'store:cancellation_policy' %}">İptal ve İade Koşulları</a> sayfasında açıklanmıştır.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Cayma hakkım her üründe geçerli mi?</h2>
+  <p>
+    Hayır. Kişiye özel üretilen, hijyen açısından iadesi uygun olmayan, ambalajı açıldıktan sonra iade
+    edilemeyecek ürünler ve benzeri istisnalar 6502 sayılı Kanun ve Mesafeli Sözleşmeler Yönetmeliği
+    kapsamında cayma hakkı dışındadır. Ürün sayfasında ayrıca belirtilen istisnalar geçerlidir.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Favoriler ve karşılaştırma nasıl çalışır?</h2>
+  <p>
+    Giriş yaptıktan sonra ürünleri favorilere ekleyebilir, “Hesabım &gt; Favorilerim” bölümünden
+    yönetebilirsiniz. Karşılaştırma listesine en fazla 4 ürün ekleyebilir; fiyat, stok ve temel özellikleri
+    yan yana inceleyebilirsiniz.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Kupon kodu nasıl kullanırım?</h2>
+  <p>
+    Sepet sayfasındaki kupon alanına geçerli kodu girerek indirim uygulayabilirsiniz. Her kuponun kullanım
+    limiti, geçerlilik tarihi ve indirim oranı farklı olabilir; geçersiz veya süresi dolmuş kodlar kabul edilmez.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Ürün hakkında soru sorabilir miyim?</h2>
+  <p>
+    Evet. Ürün detay sayfasındaki “Soru Sor” bölümünden satıcıya veya platforma iletilecek sorularınızı
+    iletebilirsiniz. Yanıtlar ürün sayfasında yayınlanabilir.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Satıcı olmak istiyorum, ne yapmalıyım?</h2>
+  <p>
+    “Satıcı Ol” başvuru formunu doldurun. Şirket bilgileriniz, vergi numaranız ve faaliyet açıklamanız
+    incelendikten sonra onay/red e-postası gönderilir. Onay sonrası satıcı panelinden ürün ekleyebilir,
+    siparişleri ve kargo durumlarını yönetebilirsiniz.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Faturamı nasıl alırım?</h2>
+  <p>
+    Checkout sırasında bireysel veya kurumsal fatura bilgilerinizi girebilirsiniz. Fatura, satıcı veya
+    platform tarafından yürürlükteki vergi mevzuatına uygun şekilde düzenlenir. Kurumsal faturalarda
+    vergi dairesi ve vergi numarası bilgilerinin doğru girilmesi sizin sorumluluğunuzdadır.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Kişisel verilerim nasıl korunuyor?</h2>
+  <p>
+    Verileriniz KVKK’ya uygun işlenir. Ayrıntılı bilgi için
+    <a href="{% url 'store:privacy_policy' %}">Gizlilik Politikası</a> sayfasını inceleyin.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Mesafeli satış sözleşmesini nereden okuyabilirim?</h2>
+  <p>
+    Sipariş öncesinde <a href="{% url 'store:distance_sales' %}">Mesafeli Satış Sözleşmesi</a> metnini
+    okuyabilirsiniz. Siparişi onaylamanız, bu sözleşme hükümlerini kabul ettiğiniz anlamına gelir.
+  </p>
+</div>
+
+<div class="legal-faq-item">
+  <h2>Şikâyet ve destek kanalları nelerdir?</h2>
+  <p>
+    E-posta: <a href="mailto:{{ legal.complaint_email }}">{{ legal.complaint_email }}</a><br>
+    Telefon: {{ legal.support_phone_display }}<br>
+    Ayrıca <a href="{% url 'store:feedback' %}">Geri Bildirim</a> formunu kullanabilirsiniz.
+    Tüketici uyuşmazlıklarında bulunduğunuz yerdeki Tüketici Hakem Heyetleri ve Tüketici Mahkemeleri
+    yetkilidir; parasal sınırlar her yıl güncellenir.
+  </p>
+</div>
+{% endblock %}

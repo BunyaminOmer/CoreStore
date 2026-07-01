@@ -9,8 +9,10 @@ from .models import (
     CargoStation,
     Category,
     CategoryInstallmentRule,
+    CompareProduct,
     Coupon,
     CustomerAddress,
+    FavoriteProduct,
     HeroCampaign,
     HomeFeaturedCategory,
     HomeFeaturedProduct,
@@ -18,8 +20,12 @@ from .models import (
     Order,
     OrderItem,
     OrderPhoneNotification,
+    OrderServiceRequest,
     Product,
+    ProductMedia,
+    ProductQuestion,
     ProductReview,
+    ProductVariant,
     Shipment,
     ShipmentEvent,
     ShippingCompany,
@@ -33,6 +39,33 @@ class CategoryAdmin(admin.ModelAdmin):
     list_filter = ['is_active']
     search_fields = ['name']
 
+class ProductMediaInline(admin.TabularInline):
+    model = ProductMedia
+    extra = 1
+    fields = ['media_type', 'file', 'media_preview', 'title', 'display_order', 'is_active']
+    readonly_fields = ['media_preview']
+
+    @admin.display(description='Önizleme')
+    def media_preview(self, obj):
+        if not obj or not obj.file:
+            return 'Dosya eklenmedi.'
+        if obj.is_video:
+            return format_html(
+                '<video src="{}" style="width:140px;height:84px;object-fit:cover;border-radius:8px;border:1px solid #ddd;" controls muted></video>',
+                obj.file.url,
+            )
+        return format_html(
+            '<img src="{}" style="width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid #ddd;" />',
+            obj.file.url,
+        )
+
+
+class ProductVariantInline(admin.TabularInline):
+    model = ProductVariant
+    extra = 1
+    fields = ['option_name', 'option_value', 'sku', 'price_delta', 'stock', 'display_order', 'is_active']
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ['name', 'vendor', 'category', 'price', 'discount_price', 'stock', 'is_active', 'is_approved', 'created_at']
@@ -40,6 +73,40 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ['name', 'description']
     prepopulated_fields = {'slug': ('name',)}
     list_editable = ['is_active', 'is_approved', 'stock']
+    inlines = [ProductVariantInline, ProductMediaInline]
+
+
+@admin.register(ProductMedia)
+class ProductMediaAdmin(admin.ModelAdmin):
+    list_display = ['product', 'media_type', 'title', 'display_order', 'is_active', 'created_at']
+    list_filter = ['media_type', 'is_active', 'product__category']
+    search_fields = ['product__name', 'title']
+    autocomplete_fields = ['product']
+    list_editable = ['display_order', 'is_active']
+
+
+@admin.register(ProductVariant)
+class ProductVariantAdmin(admin.ModelAdmin):
+    list_display = ['product', 'option_name', 'option_value', 'sku', 'price_delta', 'stock', 'display_order', 'is_active']
+    list_filter = ['is_active', 'option_name', 'product__category']
+    search_fields = ['product__name', 'option_name', 'option_value', 'sku']
+    autocomplete_fields = ['product']
+    list_editable = ['stock', 'display_order', 'is_active']
+
+
+@admin.register(FavoriteProduct)
+class FavoriteProductAdmin(admin.ModelAdmin):
+    list_display = ['user', 'product', 'created_at']
+    search_fields = ['user__username', 'user__email', 'product__name']
+    autocomplete_fields = ['user', 'product']
+
+
+@admin.register(CompareProduct)
+class CompareProductAdmin(admin.ModelAdmin):
+    list_display = ['user', 'product', 'created_at']
+    search_fields = ['user__username', 'user__email', 'product__name']
+    autocomplete_fields = ['user', 'product']
+
 
 @admin.register(HeroCampaign)
 class HeroCampaignAdmin(admin.ModelAdmin):
@@ -233,6 +300,15 @@ class OrderPhoneNotificationAdmin(admin.ModelAdmin):
     readonly_fields = ['order', 'phone', 'message', 'tracking_link', 'provider_response', 'created_at']
 
 
+@admin.register(OrderServiceRequest)
+class OrderServiceRequestAdmin(admin.ModelAdmin):
+    list_display = ['order', 'user', 'request_type', 'reason', 'status', 'created_at']
+    list_filter = ['request_type', 'status', 'created_at']
+    search_fields = ['order__id', 'user__username', 'user__email', 'reason', 'description']
+    autocomplete_fields = ['order', 'user']
+    list_editable = ['status']
+
+
 @admin.register(Coupon)
 class CouponAdmin(admin.ModelAdmin):
     list_display = ['code', 'discount_percent', 'is_active', 'valid_from', 'valid_until', 'times_used', 'usage_limit']
@@ -246,6 +322,23 @@ class ProductReviewAdmin(admin.ModelAdmin):
     list_filter = ['rating', 'is_approved', 'created_at']
     search_fields = ['product__name', 'user__username', 'title', 'comment']
     list_editable = ['is_approved']
+
+
+@admin.register(ProductQuestion)
+class ProductQuestionAdmin(admin.ModelAdmin):
+    list_display = ['product', 'user', 'short_question', 'has_answer', 'is_public', 'created_at']
+    list_filter = ['is_public', 'created_at', 'answered_at']
+    search_fields = ['product__name', 'user__username', 'user__email', 'question', 'answer']
+    autocomplete_fields = ['product', 'user', 'answered_by']
+    list_editable = ['is_public']
+
+    @admin.display(description='Soru')
+    def short_question(self, obj):
+        return obj.question[:80]
+
+    @admin.display(description='Cevaplandı', boolean=True)
+    def has_answer(self, obj):
+        return bool(obj.answer)
 
 
 @admin.register(SiteFeedback)

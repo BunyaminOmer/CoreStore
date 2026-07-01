@@ -1,8 +1,92 @@
 {% extends 'base.html' %}
 {% load store_tags %}
 
+{% block extra_css %}
+<style>
+    .vendor-orders-shell {
+        --vendor-line: rgba(15, 41, 66, .1);
+    }
+
+    .shipment-summary {
+        display: grid;
+        gap: .25rem;
+        min-width: 180px;
+    }
+
+    .shipment-summary__code {
+        color: var(--primary);
+        font-weight: 900;
+        line-height: 1.2;
+    }
+
+    .shipment-summary__station,
+    .shipment-summary__company {
+        color: var(--text-muted);
+        font-size: .78rem;
+        font-weight: 700;
+    }
+
+    .shipment-editor {
+        min-width: 310px;
+        border: 1px solid var(--vendor-line);
+        border-radius: 8px;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .shipment-editor summary {
+        min-height: 42px;
+        list-style: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .75rem;
+        padding: .55rem .75rem;
+        color: var(--primary);
+        font-weight: 900;
+    }
+
+    .shipment-editor summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .shipment-editor summary i {
+        transition: transform .18s ease;
+    }
+
+    .shipment-editor[open] summary i {
+        transform: rotate(180deg);
+    }
+
+    .shipment-editor__body {
+        border-top: 1px solid var(--vendor-line);
+        background: #f8fafc;
+        padding: .85rem;
+    }
+
+    .shipment-editor label {
+        color: var(--text-muted);
+        font-size: .72rem;
+        font-weight: 900;
+        margin-bottom: .25rem;
+    }
+
+    .shipment-editor .form-control,
+    .shipment-editor .form-select {
+        border-radius: 8px;
+    }
+
+    @media (max-width: 991.98px) {
+        .shipment-editor {
+            min-width: 260px;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-5">
+<div class="container py-5 vendor-orders-shell">
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
         <h2 class="fw-bold mb-0">Gelen Siparişler</h2>
         <a href="{% url 'vendors:dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">Geri Dön</a>
@@ -52,70 +136,83 @@
                             <td class="fw-bold text-primary">{{ item.line_total|currency }}</td>
                             <td>
                                 {% if item.order.shipment %}
-                                    <div class="fw-bold text-dark">{{ item.order.shipment.tracking_number }}</div>
-                                    <small class="text-muted d-block">CoreJet</small>
-                                    <small class="text-muted d-block">
+                                    <div class="shipment-summary">
+                                      <span class="shipment-summary__code">{{ item.order.shipment.tracking_number }}</span>
+                                      <span class="shipment-summary__company">CoreJet</span>
+                                      <span class="shipment-summary__station">
                                         {% if item.order.shipment.current_station %}
                                             {{ item.order.shipment.current_station.name }}
                                         {% else %}
                                             İstasyon seçilmedi
                                         {% endif %}
-                                    </small>
-                                    <span class="badge bg-primary-subtle text-primary mt-1">{{ item.order.shipment.get_status_display }}</span>
+                                      </span>
+                                      <span class="badge bg-primary-subtle text-primary mt-1">{{ item.order.shipment.get_status_display }}</span>
+                                    </div>
                                 {% else %}
                                     <span class="badge bg-secondary-subtle text-secondary">Takip oluşturulmadı</span>
                                 {% endif %}
                             </td>
-                            <td style="min-width: 420px;">
-                                <form method="POST" action="{% url 'vendors:orders' %}" class="vendor-shipment-form">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="order_id" value="{{ item.order.id }}">
-                                    <div class="row g-2">
-                                        <div class="col-md-6">
-                                            <select name="status" class="form-select form-select-sm shadow-sm">
-                                                <option value="pending" {% if item.order.status == 'pending' %}selected{% endif %}>Beklemede</option>
-                                                <option value="confirmed" {% if item.order.status == 'confirmed' %}selected{% endif %}>Onaylandı</option>
-                                                <option value="shipped" {% if item.order.status == 'shipped' %}selected{% endif %}>Kargoda</option>
-                                                <option value="delivered" {% if item.order.status == 'delivered' %}selected{% endif %}>Teslim Edildi</option>
-                                                <option value="cancelled" {% if item.order.status == 'cancelled' %}selected{% endif %}>İptal</option>
-                                            </select>
+                            <td>
+                                <details class="shipment-editor">
+                                    <summary>
+                                        <span><i class="bi bi-truck me-1"></i>Kargo düzenle</span>
+                                        <i class="bi bi-chevron-down"></i>
+                                    </summary>
+                                    <form method="POST" action="{% url 'vendors:orders' %}" class="shipment-editor__body">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="order_id" value="{{ item.order.id }}">
+                                        <div class="row g-2">
+                                            <div class="col-md-6">
+                                                <label>Sipariş Durumu</label>
+                                                <select name="status" class="form-select form-select-sm">
+                                                    <option value="pending" {% if item.order.status == 'pending' %}selected{% endif %}>Beklemede</option>
+                                                    <option value="confirmed" {% if item.order.status == 'confirmed' %}selected{% endif %}>Onaylandı</option>
+                                                    <option value="shipped" {% if item.order.status == 'shipped' %}selected{% endif %}>Kargoda</option>
+                                                    <option value="delivered" {% if item.order.status == 'delivered' %}selected{% endif %}>Teslim Edildi</option>
+                                                    <option value="cancelled" {% if item.order.status == 'cancelled' %}selected{% endif %}>İptal</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label>Kargo Durumu</label>
+                                                <select name="shipment_status" class="form-select form-select-sm">
+                                                    {% for value, label in shipment_status_choices %}
+                                                    <option value="{{ value }}" {% if item.order.shipment.status == value %}selected{% endif %}>{{ label }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label>Takip No</label>
+                                                <input type="text"
+                                                       name="tracking_number"
+                                                       value="{{ item.order.shipment.tracking_number|default:'' }}"
+                                                       class="form-control form-control-sm"
+                                                       placeholder="Boşsa otomatik oluşur">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label>İstasyon</label>
+                                                <select name="current_station" class="form-select form-select-sm">
+                                                    <option value="">İstasyon seç</option>
+                                                    {% for station in cargo_stations %}
+                                                    <option value="{{ station.id }}" {% if item.order.shipment.current_station_id == station.id %}selected{% endif %}>{{ station.city }} - {{ station.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-9">
+                                                <label>Kargo Notu</label>
+                                                <input type="text"
+                                                       name="shipment_note"
+                                                       value="{{ item.order.shipment.note|default:'' }}"
+                                                       class="form-control form-control-sm"
+                                                       placeholder="Örn: Transfer merkezinden çıktı">
+                                            </div>
+                                            <div class="col-md-3 d-grid align-self-end">
+                                                <button type="submit" class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-check-lg me-1"></i>Kaydet
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div class="col-md-6">
-                                            <select name="shipment_status" class="form-select form-select-sm shadow-sm">
-                                                {% for value, label in shipment_status_choices %}
-                                                <option value="{{ value }}" {% if item.order.shipment.status == value %}selected{% endif %}>{{ label }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <input type="text"
-                                                   name="tracking_number"
-                                                   value="{{ item.order.shipment.tracking_number|default:'' }}"
-                                                   class="form-control form-control-sm shadow-sm"
-                                                   placeholder="CoreJet takip no">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <select name="current_station" class="form-select form-select-sm shadow-sm">
-                                                <option value="">İstasyon seç</option>
-                                                {% for station in cargo_stations %}
-                                                <option value="{{ station.id }}" {% if item.order.shipment.current_station_id == station.id %}selected{% endif %}>{{ station.city }} - {{ station.name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                        <div class="col-md-10">
-                                            <input type="text"
-                                                   name="shipment_note"
-                                                   value="{{ item.order.shipment.note|default:'' }}"
-                                                   class="form-control form-control-sm shadow-sm"
-                                                   placeholder="Kargo notu">
-                                        </div>
-                                        <div class="col-md-2 d-grid">
-                                            <button type="submit" class="btn btn-sm btn-primary shadow-sm" title="Güncelle">
-                                                <i class="bi bi-check-lg"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </form>
+                                    </form>
+                                </details>
                             </td>
                         </tr>
                         {% endfor %}

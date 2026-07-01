@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load store_tags %}
+
+{% block content %}
+<div class="container compare-page py-5">
+  <div class="page-header">
+    <div class="page-header__icon">
+      <i class="bi bi-layout-three-columns"></i>
+    </div>
+    <div>
+      <h1 class="page-header__title">Ürün Karşılaştırma</h1>
+      <p class="page-header__desc">Seçtiğiniz ürünleri yan yana inceleyin.</p>
+    </div>
+  </div>
+
+  {% if products %}
+  <div class="compare-table-wrap">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Özellik</th>
+          {% for product in products %}
+          <th>
+            <div class="compare-product-head">
+              {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}">
+              {% else %}
+                <span class="compare-product-head__placeholder"><i class="bi bi-image"></i></span>
+              {% endif %}
+              <a href="{% url 'store:product_detail' product.slug %}">{{ product.name }}</a>
+              <form method="POST" action="{% url 'store:remove_compare' product.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill">
+                  <i class="bi bi-x-lg"></i> Çıkar
+                </button>
+              </form>
+            </div>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Fiyat</td>
+          {% for product in products %}
+          <td>
+            {% if product.discount_price %}
+              <strong>{{ product.discount_price|currency }}</strong>
+              <small class="text-muted text-decoration-line-through d-block">{{ product.price|currency }}</small>
+            {% else %}
+              <strong>{{ product.price|currency }}</strong>
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        <tr>
+          <td>Satıcı</td>
+          {% for product in products %}<td>{{ product.vendor.store_name }}</td>{% endfor %}
+        </tr>
+        <tr>
+          <td>Kategori</td>
+          {% for product in products %}<td>{{ product.category.name|default:'-' }}</td>{% endfor %}
+        </tr>
+        <tr>
+          <td>Stok</td>
+          {% for product in products %}
+          <td>{% if product.stock > 0 %}{{ product.stock }} adet{% else %}Stok yok{% endif %}</td>
+          {% endfor %}
+        </tr>
+        <tr>
+          <td>Açıklama</td>
+          {% for product in products %}<td>{{ product.description|truncatechars:180|default:'-' }}</td>{% endfor %}
+        </tr>
+        <tr>
+          <td>İşlem</td>
+          {% for product in products %}
+          <td>
+            <button class="btn btn-primary rounded-pill px-4" onclick="addToCart({{ product.id }})">
+              <i class="bi bi-cart-plus"></i> Sepete Ekle
+            </button>
+          </td>
+          {% endfor %}
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-arrow-left-right empty-state__icon"></i>
+    <p class="empty-state__title">Karşılaştırma listeniz boş.</p>
+    <p class="empty-state__text">Ürün kartlarındaki karşılaştırma ikonuyla ürün ekleyebilirsiniz.</p>
+    <a href="{% url 'store:home' %}" class="btn-primary-custom mt-3">
+      <i class="bi bi-house"></i> Ana Sayfaya Dön
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

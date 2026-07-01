@@ -47,15 +47,17 @@ function updateCartBadge(count) {
 }
 
 // Add to Cart
-async function addToCart(productId, quantity = 1) {
+async function addToCart(productId, quantity = 1, variantId = null) {
     try {
+        const payload = { product_id: productId, quantity: quantity };
+        if (variantId) payload.variant_id = variantId;
         const response = await fetch('/cart/add/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({ product_id: productId, quantity: quantity })
+            body: JSON.stringify(payload)
         });
         
         const data = await response.json();

@@ -66,7 +66,13 @@
             <div class="col-md-8">
                 <span class="badge bg-white text-primary mb-2 px-3 py-2 rounded-pill"><i class="bi bi-patch-check-fill text-accent me-1"></i> Onaylı Satıcı</span>
                 <h1 class="fw-bold mb-1">{{ vendor.store_name }}</h1>
-                <p class="mb-0 opacity-75">Mağaza Yönetim Paneline Hoş Geldiniz.</p>
+                <p class="mb-0 opacity-75">
+                    {% if active_subscription %}
+                        {{ active_subscription.plan.name }} paketi aktif · {{ active_subscription.ends_at|date:"d M Y" }} tarihine kadar
+                    {% else %}
+                        Mağaza Yönetim Paneline Hoş Geldiniz.
+                    {% endif %}
+                </p>
             </div>
             <div class="col-md-4 text-md-end mt-4 mt-md-0">
                 <a href="{% url 'vendors:product_add' %}" class="btn btn-light text-primary rounded-pill px-4 py-2 fw-bold shadow-sm">
@@ -75,6 +81,16 @@
             </div>
         </div>
     </div>
+
+    {% if not vendor.has_business_profile %}
+    <div class="alert alert-warning border-0 rounded-4 shadow-sm d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mt-4 fade-in-up">
+        <div>
+            <div class="fw-bold"><i class="bi bi-building-check me-2"></i>İşletme profiliniz tamamlanmadı</div>
+            <div class="small mb-0">Abonelik paketleri, sponsorlu ürün ve reklam alanlarını kullanmak için önce işletme bilgilerinizi kaydedin.</div>
+        </div>
+        <a href="{% url 'vendors:business_profile' %}" class="btn btn-dark rounded-pill px-4">Profili Tamamla</a>
+    </div>
+    {% endif %}
 
     <!-- KPI Cards -->
     <div class="row g-4 mb-5 fade-in-up stagger-1">
@@ -121,6 +137,61 @@
                     <div class="kpi-value">5.0<span class="fs-6 text-muted fw-normal ms-1">/ 5</span></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5 fade-in-up stagger-1">
+        <div class="col-lg-3 col-md-6">
+            <a href="{% url 'vendors:business_profile' %}" class="text-decoration-none">
+                <div class="bg-white rounded-4 shadow-sm p-4 h-100 border border-custom">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <i class="bi bi-building text-primary fs-3"></i>
+                        {% if vendor.has_business_profile %}
+                            <span class="badge bg-success-subtle text-success">Hazır</span>
+                        {% else %}
+                            <span class="badge bg-warning-subtle text-warning">Eksik</span>
+                        {% endif %}
+                    </div>
+                    <h6 class="fw-bold text-dark mb-1">İşletme Profili</h6>
+                    <p class="small text-muted mb-0">Vergi, fatura ve resmi iletişim bilgileri.</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <a href="{% url 'vendors:subscriptions' %}" class="text-decoration-none">
+                <div class="bg-white rounded-4 shadow-sm p-4 h-100 border border-custom">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <i class="bi bi-gem text-info fs-3"></i>
+                        <span class="badge bg-light text-dark">{{ pending_subscription_count }} bekleyen</span>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-1">Satıcı Paketleri</h6>
+                    <p class="small text-muted mb-0">Ürün limiti, sponsor hakkı ve destek seviyesi.</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <a href="{% url 'vendors:sponsorships' %}" class="text-decoration-none">
+                <div class="bg-white rounded-4 shadow-sm p-4 h-100 border border-custom">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <i class="bi bi-megaphone text-warning fs-3"></i>
+                        <span class="badge bg-light text-dark">{{ active_campaign_count }} yayında</span>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-1">Sponsorlu Ürün</h6>
+                    <p class="small text-muted mb-0">{{ pending_campaign_count }} kampanya onay bekliyor.</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <a href="{% url 'vendors:services' %}" class="text-decoration-none">
+                <div class="bg-white rounded-4 shadow-sm p-4 h-100 border border-custom">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <i class="bi bi-headset text-success fs-3"></i>
+                        <span class="badge bg-light text-dark">{{ open_service_count }} açık</span>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-1">Hizmet & Destek</h6>
+                    <p class="small text-muted mb-0">Kurulum, yükleme, tasarım ve öncelikli destek.</p>
+                </div>
+            </a>
         </div>
     </div>
 
@@ -177,6 +248,12 @@
                     </a>
                     <a href="{% url 'vendors:bulk_upload' %}" class="btn btn-light py-3 text-start border shadow-sm rounded-3">
                         <i class="bi bi-cloud-arrow-up text-info fs-5 me-3 align-middle"></i> <span class="fw-bold text-dark">Toplu Yükle (Excel)</span>
+                    </a>
+                    <a href="{% url 'vendors:subscriptions' %}" class="btn btn-light py-3 text-start border shadow-sm rounded-3">
+                        <i class="bi bi-gem text-warning fs-5 me-3 align-middle"></i> <span class="fw-bold text-dark">Satıcı Paketleri</span>
+                    </a>
+                    <a href="{% url 'vendors:ads' %}" class="btn btn-light py-3 text-start border shadow-sm rounded-3">
+                        <i class="bi bi-badge-ad text-danger fs-5 me-3 align-middle"></i> <span class="fw-bold text-dark">Reklam Alanları</span>
                     </a>
                 </div>
             </div>

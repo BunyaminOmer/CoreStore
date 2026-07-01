@@ -74,6 +74,11 @@
                                             <span style="font-size:.78rem; color:var(--text-light);">
                                                 <i class="bi bi-shop me-1"></i>{{ item.product.vendor.store_name }}
                                             </span>
+                                            {% if item.variant %}
+                                            <span class="d-block mt-1 small fw-bold text-primary">
+                                                {{ item.variant.label }}{% if item.variant.sku %} · {{ item.variant.sku }}{% endif %}
+                                            </span>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </td>
@@ -81,7 +86,7 @@
                                 <!-- Unit price -->
                                 <td>
                                     <span style="font-size:.9rem; font-weight:600; color:var(--text-muted);">
-                                        {{ item.product.effective_price|currency }}
+                                        {{ item.unit_price|currency }}
                                     </span>
                                 </td>
 
@@ -92,7 +97,7 @@
                                             onclick="updateCart({{ item.id }}, parseInt(document.getElementById('qty-{{ item.id }}').value) - 1)"
                                             aria-label="Azalt">−</button>
                                         <input type="number" id="qty-{{ item.id }}" value="{{ item.quantity }}" min="1"
-                                            max="{{ item.product.stock }}" readonly>
+                                            max="{{ item.available_stock }}" readonly>
                                         <button
                                             onclick="updateCart({{ item.id }}, parseInt(document.getElementById('qty-{{ item.id }}').value) + 1)"
                                             aria-label="Artır">+</button>

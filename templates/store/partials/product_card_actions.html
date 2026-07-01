@@ -1,0 +1,22 @@
+<div class="product-card-actions">
+  <form method="POST" action="{% url 'store:toggle_favorite' product.id %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <button type="submit"
+            class="product-card-action"
+            title="{% if product.id in favorite_product_ids %}Favorilerden çıkar{% else %}Favorilere ekle{% endif %}"
+            aria-label="{% if product.id in favorite_product_ids %}Favorilerden çıkar{% else %}Favorilere ekle{% endif %}">
+      <i class="bi {% if product.id in favorite_product_ids %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+    </button>
+  </form>
+  <form method="POST" action="{% if product.id in compare_product_ids %}{% url 'store:remove_compare' product.id %}{% else %}{% url 'store:add_compare' product.id %}{% endif %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <button type="submit"
+            class="product-card-action"
+            title="{% if product.id in compare_product_ids %}Karşılaştırmadan çıkar{% else %}Karşılaştırmaya ekle{% endif %}"
+            aria-label="{% if product.id in compare_product_ids %}Karşılaştırmadan çıkar{% else %}Karşılaştırmaya ekle{% endif %}">
+      <i class="bi {% if product.id in compare_product_ids %}bi-columns-gap{% else %}bi-arrow-left-right{% endif %}"></i>
+    </button>
+  </form>
+</div>

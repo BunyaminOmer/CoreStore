@@ -1,0 +1,136 @@
+{% extends 'store/legal/base_legal.html' %}
+
+{% block legal_content %}
+<h1>Gizlilik Politikası</h1>
+<p class="legal-meta">Yürürlük tarihi: {{ legal.effective_date }} · Son güncelleme: {{ legal.last_updated }}</p>
+
+<p>
+  Bu Gizlilik Politikası; <strong>{{ legal.platform_name }}</strong> internet sitesi ve mobil uyumlu platformu
+  (“Platform”) üzerinden sunulan hizmetler kapsamında kişisel verilerinizin 6698 sayılı Kişisel Verilerin
+  Korunması Kanunu (“KVKK”) ve ilgili mevzuata uygun şekilde işlenmesine ilişkin esasları açıklar.
+  Platform, <strong>{{ legal.operator_name }}</strong> tarafından işletilmektedir.
+</p>
+
+<h2>1. Veri Sorumlusu</h2>
+<p>
+  KVKK kapsamında veri sorumlusu: <strong>{{ legal.operator_name }}</strong> / <strong>{{ legal.platform_name }}</strong>.
+</p>
+<ul>
+  <li>Web sitesi: <a href="{{ legal.website }}">{{ legal.website }}</a></li>
+  <li>E-posta: <a href="mailto:{{ legal.support_email }}">{{ legal.support_email }}</a></li>
+  <li>Telefon: <a href="tel:08501234567">{{ legal.support_phone_display }}</a></li>
+</ul>
+<p>
+  KVKK kapsamındaki taleplerinizi <a href="mailto:{{ legal.kvkk_application_email }}">{{ legal.kvkk_application_email }}</a>
+  adresine “KVKK Başvurusu” konu başlığı ile iletebilirsiniz.
+</p>
+
+<h2>2. İşlenen Kişisel Veriler</h2>
+<p>Platformu kullanım şeklinize bağlı olarak aşağıdaki veriler işlenebilir:</p>
+<ul>
+  <li><strong>Kimlik ve iletişim:</strong> ad, soyad, kullanıcı adı, e-posta, telefon, teslimat/fatura adresi, il, ilçe, posta kodu.</li>
+  <li><strong>Hesap ve güvenlik:</strong> parola (hash’lenmiş), oturum bilgileri, e-posta ile iki adımlı doğrulama (2FA) kayıtları, IP adresi, tarayıcı/cihaz bilgileri, log kayıtları.</li>
+  <li><strong>Sipariş ve işlem:</strong> sepet içeriği, sipariş geçmişi, ödeme yöntemi tercihi, taksit seçimi, kupon kullanımı, fatura bilgileri (bireysel/kurumsal), sipariş notları.</li>
+  <li><strong>Müşteri hizmetleri:</strong> iptal/iade talepleri, geri bildirim formları, ürün soruları, ürün yorumları, destek yazışmaları.</li>
+  <li><strong>Tercih ve kullanım:</strong> favori ürünler, karşılaştırma listesi, arama geçmişi (oturum bazlı), çerez tercihleri.</li>
+  <li><strong>Satıcı başvurusu (varsa):</strong> şirket adı, vergi numarası, mağaza açıklaması, iletişim bilgileri.</li>
+  <li><strong>Görsel/medya:</strong> profil fotoğrafı, yüklenen ürün görselleri ve medya dosyaları.</li>
+</ul>
+<p>
+  Ödeme kartı numarası, CVV ve benzeri hassas kart verileri Platform tarafından kalıcı olarak saklanmaz.
+  Ödeme işlemleri lisanslı ödeme kuruluşu altyapısı üzerinden gerçekleştirilir.
+</p>
+
+<h2>3. Kişisel Verilerin İşlenme Amaçları</h2>
+<ul>
+  <li>Üyelik oluşturma, kimlik doğrulama ve hesap güvenliğinin sağlanması</li>
+  <li>Ürün/hizmet sunumu, sipariş oluşturma, faturalandırma ve teslimat süreçlerinin yürütülmesi</li>
+  <li>Kargo takibi, sipariş bilgilendirme mesajlarının iletilmesi</li>
+  <li>İptal, iade ve cayma hakkı süreçlerinin yönetilmesi</li>
+  <li>Müşteri destek taleplerinin yanıtlanması</li>
+  <li>Pazar yeri modeli kapsamında satıcı–alıcı eşleştirmesi ve satıcı başvurularının değerlendirilmesi</li>
+  <li>Platform güvenliği, dolandırıcılık önleme ve hukuki yükümlülüklerin yerine getirilmesi</li>
+  <li>İstatistiksel analiz, performans ölçümü ve hizmet kalitesinin artırılması</li>
+  <li>Açık rızanız olması hâlinde kampanya, duyuru ve bilgilendirme iletileri</li>
+</ul>
+
+<h2>4. Hukuki Sebepler</h2>
+<p>Kişisel verileriniz KVKK’nın 5. ve 6. maddelerinde belirtilen hukuki sebeplere dayanılarak işlenir:</p>
+<ul>
+  <li>Bir sözleşmenin kurulması veya ifası (üyelik, sipariş, teslimat)</li>
+  <li>Hukuki yükümlülüğün yerine getirilmesi (muhasebe, vergi, tüketici mevzuatı kayıtları)</li>
+  <li>Veri sorumlusunun meşru menfaati (platform güvenliği, kötüye kullanımın önlenmesi)</li>
+  <li>Açık rıza (pazarlama iletileri ve zorunlu olmayan çerezler için)</li>
+</ul>
+
+<h2>5. Kişisel Verilerin Aktarılması</h2>
+<p>Verileriniz yalnızca gerekli olduğu ölçüde ve güvenlik önlemleri alınarak aktarılabilir:</p>
+<ul>
+  <li><strong>Satıcılar:</strong> Siparişin ifası için ürünü satan onaylı satıcıya teslimat ve iletişim bilgileri.</li>
+  <li><strong>Kargo firması ({{ legal.shipping_partner }}):</strong> Teslimat, takip numarası ve alıcı bilgileri.</li>
+  <li><strong>Ödeme kuruluşları:</strong> Ödeme doğrulama ve tahsilat işlemleri.</li>
+  <li><strong>E-posta/SMS hizmet sağlayıcıları:</strong> Doğrulama kodu, sipariş ve bilgilendirme mesajları.</li>
+  <li><strong>Bulut/medya hizmet sağlayıcıları:</strong> Ürün görselleri ve dosya barındırma.</li>
+  <li><strong>Barındırma ve altyapı sağlayıcıları:</strong> Sunucu, veritabanı ve güvenlik hizmetleri.</li>
+  <li><strong>Yetkili kamu kurumları:</strong> Mevzuattan doğan zorunlu bildirim ve talepler.</li>
+</ul>
+<p>Yurt dışına aktarım söz konusu olduğunda KVKK’nın 9. maddesine uygun teknik ve idari tedbirler alınır.</p>
+
+<h2>6. Saklama Süreleri</h2>
+<p>
+  Kişisel veriler, işleme amacının gerektirdiği süre boyunca ve ilgili mevzuattaki zamanaşımı/saklama
+  süreleri dikkate alınarak muhafaza edilir. Süre sonunda veriler silinir, yok edilir veya anonim hale getirilir.
+</p>
+<ul>
+  <li>Üyelik ve sipariş kayıtları: sözleşmesel ilişki + yasal saklama süreleri</li>
+  <li>Destek talepleri ve iade/iptal kayıtları: uyuşmazlık süreleri boyunca</li>
+  <li>Log kayıtları: bilgi güvenliği amacıyla sınırlı süre</li>
+</ul>
+
+<h2>7. KVKK Kapsamındaki Haklarınız</h2>
+<p>KVKK’nın 11. maddesi uyarınca;</p>
+<ul>
+  <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme,</li>
+  <li>İşlenmişse buna ilişkin bilgi talep etme,</li>
+  <li>İşlenme amacını ve amaca uygun kullanılıp kullanılmadığını öğrenme,</li>
+  <li>Yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme,</li>
+  <li>Eksik veya yanlış işlenmişse düzeltilmesini isteme,</li>
+  <li>KVKK’nın 7. maddesi çerçevesinde silinmesini veya yok edilmesini isteme,</li>
+  <li>Düzeltme/silme işlemlerinin aktarıldığı üçüncü kişilere bildirilmesini isteme,</li>
+  <li>Otomatik sistemler ile analiz sonucu aleyhinize bir sonucun ortaya çıkmasına itiraz etme,</li>
+  <li>Kanuna aykırı işleme sebebiyle zarara uğramanız hâlinde tazminat talep etme</li>
+</ul>
+<p>haklarına sahipsiniz.</p>
+<p>
+  Başvurularınız en geç 30 gün içinde sonuçlandırılır. Başvuru formatı ve kimlik doğrulama için
+  <a href="mailto:{{ legal.kvkk_application_email }}">{{ legal.kvkk_application_email }}</a> adresini kullanabilirsiniz.
+</p>
+
+<h2>8. Çerezler (Cookies)</h2>
+<p>Platformda aşağıdaki çerez türleri kullanılabilir:</p>
+<ul>
+  <li><strong>Zorunlu çerezler:</strong> Oturum yönetimi, sepet, güvenlik ve CSRF koruması.</li>
+  <li><strong>İşlevsel çerezler:</strong> Dil/tercih hatırlama, kullanıcı deneyimi iyileştirmeleri.</li>
+  <li><strong>Analitik çerezler:</strong> Anonim trafik ve performans ölçümü (açık rıza ile).</li>
+</ul>
+<p>Tarayıcı ayarlarınızdan çerezleri yönetebilir veya silebilirsiniz; zorunlu çerezlerin kapatılması bazı özellikleri devre dışı bırakabilir.</p>
+
+<h2>9. Güvenlik Önlemleri</h2>
+<p>
+  {{ legal.platform_name }}, kişisel verilerin gizliliğini korumak için SSL/TLS şifreleme, erişim yetkilendirme,
+  parola hash’leme, güvenli sunucu altyapısı, düzenli yedekleme ve log izleme gibi teknik ve idari tedbirler uygular.
+</p>
+
+<h2>10. Politika Değişiklikleri</h2>
+<p>
+  Bu politika, mevzuat veya hizmet kapsamındaki değişiklikler doğrultusunda güncellenebilir.
+  Güncel metin her zaman Platformda yayımlanan sürüm olup yürürlük tarihi sayfa başında belirtilir.
+</p>
+
+<h2>11. İletişim</h2>
+<p>
+  Gizlilik ve kişisel verilerle ilgili sorularınız için:
+  <a href="mailto:{{ legal.support_email }}">{{ legal.support_email }}</a> ·
+  {{ legal.support_phone_display }}
+</p>
+{% endblock %}

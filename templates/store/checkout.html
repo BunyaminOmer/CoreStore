@@ -275,12 +275,19 @@
           <div class="payment-card-preview" aria-hidden="true">
             <div class="payment-card-preview__top">
               <span id="card-brand">CoreCard</span>
-              <i class="bi bi-wifi-2"></i>
+              <i class="bi bi-wifi" style="transform: rotate(90deg); font-size:1.6rem; opacity:0.85;"></i>
             </div>
+            <div class="payment-card-chip"></div>
             <div class="payment-card-preview__number" id="card-preview-number">0000 0000 0000 0000</div>
             <div class="payment-card-preview__bottom">
-              <span id="card-preview-name">AD SOYAD</span>
-              <span id="card-preview-expiry">AA/YY</span>
+              <div style="display:flex; flex-direction:column; line-height:1.2;">
+                <small style="font-size:0.55rem; opacity:0.75; letter-spacing:1px; margin-bottom:2px;">KART SAHİBİ</small>
+                <span id="card-preview-name" style="letter-spacing:1px;">AD SOYAD</span>
+              </div>
+              <div style="display:flex; flex-direction:column; line-height:1.2; text-align:right;">
+                <small style="font-size:0.55rem; opacity:0.75; letter-spacing:1px; margin-bottom:2px;">AY/YIL</small>
+                <span id="card-preview-expiry">AA/YY</span>
+              </div>
             </div>
           </div>
 
@@ -343,6 +350,9 @@
             {% endif %}
             <div style="flex:1; min-width:0;">
               <div class="checkout-summary-item__name">{{ item.product.name|truncatechars:40 }}</div>
+              {% if item.variant %}
+              <div class="small fw-bold text-primary">{{ item.variant.label }}</div>
+              {% endif %}
               <div class="checkout-summary-item__qty">{{ item.quantity }} adet</div>
             </div>
             <div class="checkout-summary-item__total">{{ item.line_total|currency }}</div>

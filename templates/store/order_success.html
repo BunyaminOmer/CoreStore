@@ -57,6 +57,11 @@
                     <span class="text-muted small d-block">Sipariş Linki</span>
                     <a href="{% url 'store:order_info' order.public_token %}" class="fw-bold text-decoration-none">Sipariş bilgilendirme sayfasını aç</a>
                 </div>
+                <div class="col-12">
+                    <a href="{% url 'store:order_receipt_pdf' order.id %}" class="btn btn-outline-primary rounded-pill px-4">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> PDF Sipariş Fişini Aç
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -95,6 +100,49 @@
             {% else %}
             <p class="text-muted mb-0">Kargo kaydı hazırlanıyor.</p>
             {% endif %}
+            {% include 'store/partials/shipment_timeline.html' %}
+        </div>
+
+        <div class="bg-light rounded-3 p-4 text-start mb-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-arrow-counterclockwise me-2 text-primary"></i>İade / İptal Talebi</h5>
+            {% if order.service_requests.all %}
+                <div class="d-flex flex-column gap-2 mb-3">
+                    {% for request_item in order.service_requests.all %}
+                    <div class="bg-white border rounded-3 p-3">
+                        <div class="d-flex justify-content-between gap-2 flex-wrap">
+                            <strong>{{ request_item.get_request_type_display }}</strong>
+                            <span class="badge bg-primary-subtle text-primary">{{ request_item.get_status_display }}</span>
+                        </div>
+                        <small class="text-muted d-block mt-1">{{ request_item.reason }}</small>
+                        {% if request_item.admin_note %}
+                        <small class="text-muted d-block mt-2">Yönetici notu: {{ request_item.admin_note }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <form method="POST" action="{% url 'store:order_service_request' order.id %}">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold" for="{{ service_request_form.request_type.id_for_label }}">Talep Tipi</label>
+                        {{ service_request_form.request_type }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold" for="{{ service_request_form.reason.id_for_label }}">Sebep</label>
+                        {{ service_request_form.reason }}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold" for="{{ service_request_form.description.id_for_label }}">Açıklama</label>
+                        {{ service_request_form.description }}
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-outline-primary rounded-pill px-4">
+                            <i class="bi bi-send me-1"></i> Talep Gönder
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
         
         <div>

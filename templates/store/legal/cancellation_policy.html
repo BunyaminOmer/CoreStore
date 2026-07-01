@@ -1,0 +1,154 @@
+{% extends 'store/legal/base_legal.html' %}
+
+{% block legal_content %}
+<h1>İptal ve İade Koşulları</h1>
+<p class="legal-meta">Yürürlük tarihi: {{ legal.effective_date }} · Son güncelleme: {{ legal.last_updated }}</p>
+
+<p>
+  Bu metin, <strong>{{ legal.platform_name }}</strong> üzerinden verilen siparişlerde iptal, cayma hakkı ve iade
+  süreçlerini 6502 sayılı Tüketicinin Korunması Hakkında Kanun, Mesafeli Sözleşmeler Yönetmeliği ve ilgili
+  mevzuat çerçevesinde açıklar. Platform aracı hizmet sağlayıcıdır; ürünün satıcısı sipariş onay ekranında
+  ve sipariş detayında belirtilir.
+</p>
+
+<h2>1. Tanımlar</h2>
+<ul>
+  <li><strong>Platform:</strong> {{ legal.platform_name }} internet sitesi ve ilişkili hizmetler.</li>
+  <li><strong>Alıcı/Tüketici:</strong> Platform üzerinden ticari veya mesleki olmayan amaçlarla alışveriş yapan gerçek/tüzel kişi.</li>
+  <li><strong>Satıcı:</strong> Platformda onaylı mağaza açarak ürün/hizmet sunan üçüncü taraf işletme.</li>
+  <li><strong>Sipariş:</strong> Alıcının ödeme ve teslimat bilgilerini onaylayarak oluşturduğu satın alma talebi.</li>
+  <li><strong>Cayma hakkı:</strong> Mesafeli sözleşmelerde tüketicinin sözleşmeden belirli süre içinde dönme hakkı.</li>
+</ul>
+
+<h2>2. Sipariş İptali (Kargoya Verilmeden Önce)</h2>
+<h3>2.1. Kimler iptal talebinde bulunabilir?</h3>
+<p>
+  Giriş yapmış alıcı, kendi adına oluşturduğu siparişler için iptal talebi oluşturabilir.
+</p>
+
+<h3>2.2. Hangi durumlarda iptal mümkündür?</h3>
+<ul>
+  <li>Sipariş durumu <strong>“Beklemede”</strong> veya <strong>“Onaylandı”</strong> ise ve henüz kargoya verilmemişse,</li>
+  <li>Ürün henüz teslim edilmemişse,</li>
+  <li>Sipariş daha önce iptal edilmemişse.</li>
+</ul>
+<p>
+  Platform üzerinde iptal talebi; sipariş onay sayfası veya hesabınızdaki “Siparişlerim” bölümünden
+  “İptal Talebi” seçeneği ile iletilir. Talep incelenir; onaylandığında sipariş iptal edilir.
+</p>
+
+<h3>2.3. İptal edilemeyecek durumlar</h3>
+<ul>
+  <li>Sipariş kargoya verildiyse (durum: “Kargoda”),</li>
+  <li>Sipariş teslim edildiyse (durum: “Teslim Edildi”),</li>
+  <li>Sipariş zaten iptal edildiyse,</li>
+  <li>Ürün, cayma hakkı istisnası kapsamındaysa ve sipariş ifası başladıysa.</li>
+</ul>
+
+<h3>2.4. Ücret iadesi</h3>
+<p>
+  Onaylanan iptallerde ödenen tutar, ödeme yapılan yönteme göre iade edilir. Banka/kart iadeleri
+  genellikle 3–14 iş günü içinde yansır; süre banka ve ödeme kuruluşu politikalarına bağlıdır.
+  Taksitli alışverişlerde iade, bankanın taksit planına göre işlenir.
+</p>
+
+<h2>3. Cayma Hakkı ({{ legal.withdrawal_days }} Gün)</h2>
+<h3>3.1. Süre</h3>
+<p>
+  Mesafeli sözleşmelerde tüketici, malın kendisine veya gösterdiği adresteki kişiye teslim tarihinden
+  itibaren <strong>{{ legal.withdrawal_days }} gün</strong> içinde hiçbir gerekçe göstermeksizin ve cezai
+  şart ödemeksizin cayma hakkına sahiptir.
+</p>
+
+<h3>3.2. Cayma hakkının kullanımı</h3>
+<p>Cayma hakkını kullanmak için:</p>
+<ol>
+  <li>Hesabınızdan ilgili sipariş için “İade Talebi” oluşturun veya</li>
+  <li><a href="mailto:{{ legal.support_email }}">{{ legal.support_email }}</a> adresine sipariş numaranızı belirterek yazın.</li>
+</ol>
+<p>
+  Cayma bildiriminizin süresinde ulaşması yeterlidir. Platform, cayma hakkınızın kullanıldığına dair
+  teyit bilgisini iletir.
+</p>
+
+<h3>3.3. İade kargo süreci</h3>
+<ul>
+  <li>Onaylanan iade taleplerinde ürün, satıcının veya platformun bildirdiği adrese, hasarsız ve mümkünse orijinal ambalajında gönderilmelidir.</li>
+  <li>İade kargo ücreti, yürürlükteki mevzuat ve sözleşme hükümlerine göre belirlenir; aksi açıkça belirtilmedikçe iade nakliye masrafı alıcıya ait olabilir.</li>
+  <li>Ürün satıcıya ulaştıktan sonra inceleme yapılır; uygun bulunan iadelerde bedel iadesi başlatılır.</li>
+</ul>
+
+<h3>3.4. Cayma hakkının istisnaları</h3>
+<p>Aşağıdaki hallerde cayma hakkı kullanılamaz (örneklem):</p>
+<ul>
+  <li>Tüketicinin istekleri veya kişisel ihtiyaçları doğrultusunda hazırlanan mallar</li>
+  <li>Çabuk bozulabilen veya son kullanma tarihi geçebilecek mallar</li>
+  <li>Tesliminden sonra ambalaj, bant, mühür, paket gibi koruyucu unsurları açılmış; iadesi sağlık ve hijyen açısından uygun olmayan mallar</li>
+  <li>Tesliminden sonra başka ürünlerle karışan ve doğası gereği ayrıştırılması mümkün olmayan mallar</li>
+  <li>Malın tesliminden sonra ambalajı açılmış olan ses veya görüntü kayıtları, yazılım ve benzeri dijital içerikler (ifaya başlanmışsa)</li>
+  <li>Elektronik ortamda anında ifa edilen hizmetler veya tüketiciye anında teslim edilen gayrimaddi mallar</li>
+  <li>Cayma hakkı süresi sona ermeden tüketicinin onayı ile ifasına başlanan hizmetler</li>
+</ul>
+<p>Ürün sayfasında cayma hakkı istisnası ayrıca belirtilmişse o hüküm de geçerlidir.</p>
+
+<h2>4. Ayıplı (Defolu) Mal</h2>
+<p>
+  Teslim aldığınız ürün ayıplı ise seçimlik haklarınız (ücretsiz onarım, yenisi ile değişim, bedel indirimi,
+  sözleşmeden dönme) 6502 sayılı Kanun kapsamında saklıdır. Ayıplı mal bildirimlerinizi
+  <a href="mailto:{{ legal.support_email }}">{{ legal.support_email }}</a> adresine sipariş numarası,
+  fotoğraf ve açıklama ile iletin.
+</p>
+
+<h2>5. Yanlış veya Eksik Ürün</h2>
+<p>
+  Siparişinizden farklı, hasarlı veya eksik ürün teslim edildiyse en geç 48 saat içinde bildirim yapmanız
+  önerilir. Doğrulama sonrası yeniden gönderim veya iade süreci başlatılır.
+</p>
+
+<h2>6. İade Bedelinin Geri Ödenmesi</h2>
+<p>
+  Cayma hakkı veya onaylanmış iade talebi kapsamında iade edilecek bedel; malın satın alma bedeli,
+  varsa standart teslimat masrafı ve tüketicinin cayma hakkını kullanması sebebiyle satıcı tarafından
+  talep edilemeyecek diğer masrafları kapsar. İade, tüketicinin ödeme aracına uygun şekilde yapılır.
+</p>
+<p>
+  Taksitli işlemlerde banka tarafından tüketiciye veya satıcıya tek seferde geri ödeme yapılabilir;
+  bankanın taksitlendirme uygulaması tüketici lehine devam eder.
+</p>
+
+<h2>7. Platform Üzerinden Talep Takibi</h2>
+<p>İptal ve iade talepleriniz aşağıdaki durumlarda izlenebilir:</p>
+<ul>
+  <li><strong>Beklemede:</strong> Talebiniz alındı, inceleniyor.</li>
+  <li><strong>Onaylandı:</strong> Talebiniz kabul edildi, işlem yapılıyor.</li>
+  <li><strong>Reddedildi:</strong> Talep mevzuat veya sipariş durumu nedeniyle kabul edilmedi (gerekçe bildirilir).</li>
+  <li><strong>Tamamlandı:</strong> İptal/iade süreci sonuçlandı.</li>
+</ul>
+
+<h2>8. Satıcı Kaynaklı İade Farklılıkları</h2>
+<p>
+  Pazar yeri modelinde ürün satıcı tarafından gönderilir. Satıcının platform kurallarına uygun ek iade
+  taahhütleri (ör. extended return) varsa ürün sayfasında belirtilir. Bu taahhütler, mevzuatın
+  tüketici lehine hükümlerini ortadan kaldırmaz.
+</p>
+
+<h2>9. Uyuşmazlık Çözümü</h2>
+<p>
+  Şikâyet ve talepleriniz için önce <a href="mailto:{{ legal.complaint_email }}">{{ legal.complaint_email }}</a>
+  adresine başvurun. Çözülemeyen uyuşmazlıklarda Tüketici Hakem Heyetleri ve Tüketici Mahkemeleri
+  yetkilidir. Güncel parasal sınırlar Ticaret Bakanlığı tarafından her yıl ilan edilir.
+</p>
+
+<h2>10. İlgili Belgeler</h2>
+<ul>
+  <li><a href="{% url 'store:distance_sales' %}">Mesafeli Satış Sözleşmesi</a></li>
+  <li><a href="{% url 'store:privacy_policy' %}">Gizlilik Politikası</a></li>
+  <li><a href="{% url 'store:faq' %}">Sıkça Sorulan Sorular</a></li>
+</ul>
+
+<h2>11. İletişim</h2>
+<p>
+  E-posta: <a href="mailto:{{ legal.support_email }}">{{ legal.support_email }}</a><br>
+  Telefon: {{ legal.support_phone_display }}
+</p>
+{% endblock %}

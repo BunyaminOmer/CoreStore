@@ -118,6 +118,163 @@ class Product(models.Model):
         return self.discount_price is not None and self.discount_price < self.price
 
 
+class ProductMedia(models.Model):
+    """Additional images and videos shown on the product detail page."""
+
+    class MediaType(models.TextChoices):
+        IMAGE = 'image', 'Fotoğraf'
+        VIDEO = 'video', 'Video'
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='media',
+        verbose_name='Ürün',
+    )
+    media_type = models.CharField(
+        max_length=12,
+        choices=MediaType.choices,
+        default=MediaType.IMAGE,
+        verbose_name='Medya Tipi',
+    )
+    file = models.FileField(
+        upload_to='product_media/',
+        verbose_name='Dosya',
+    )
+    title = models.CharField(max_length=140, blank=True, verbose_name='Başlık')
+    display_order = models.PositiveIntegerField(default=0, verbose_name='Sıra')
+    is_active = models.BooleanField(default=True, verbose_name='Aktif')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Ürün Medyası'
+        verbose_name_plural = 'Ürün Medyaları'
+        ordering = ['display_order', 'id']
+
+    def __str__(self) -> str:
+        return f'{self.product.name} - {self.get_media_type_display()}'
+
+    @property
+    def is_image(self) -> bool:
+        return self.media_type == self.MediaType.IMAGE
+
+    @property
+    def is_video(self) -> bool:
+        return self.media_type == self.MediaType.VIDEO
+
+
+class ProductVariant(models.Model):
+    """Sellable option for a product such as color, storage, size, or bundle."""
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='variants',
+        verbose_name='Ürün',
+    )
+    option_name = models.CharField(max_length=80, verbose_name='Seçenek Adı')
+    option_value = models.CharField(max_length=120, verbose_name='Seçenek Değeri')
+    sku = models.CharField(max_length=80, blank=True, verbose_name='Stok Kodu')
+    price_delta = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name='Fiyat Farkı',
+        help_text='Ana ürün fiyatına eklenecek tutar. Negatif değer indirim gibi çalışır.',
+    )
+    stock = models.PositiveIntegerField(default=0, verbose_name='Varyant Stok')
+    display_order = models.PositiveIntegerField(default=0, verbose_name='Sıra')
+    is_active = models.BooleanField(default=True, verbose_name='Aktif')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Ürün Varyantı'
+        verbose_name_plural = 'Ürün Varyantları'
+        ordering = ['display_order', 'option_name', 'option_value']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['product', 'option_name', 'option_value'],
+                name='unique_product_variant_option',
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.product.name} - {self.option_name}: {self.option_value}'
+
+    @property
+    def label(self) -> str:
+        return f'{self.option_name}: {self.option_value}'
+
+    @property
+    def effective_price(self) -> Decimal:
+        price = self.product.effective_price + self.price_delta
+        return max(price, Decimal('0'))
+
+
+class FavoriteProduct(models.Model):
+    """Product saved to a customer's favorites list."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='favorite_products',
+        verbose_name='Kullanıcı',
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='favorited_by',
+        verbose_name='Ürün',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Favori Ürün'
+        verbose_name_plural = 'Favori Ürünler'
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'product'],
+                name='unique_favorite_product_per_user',
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.user} - {self.product.name}'
+
+
+class CompareProduct(models.Model):
+    """Product selected by a customer for side-by-side comparison."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='compare_products',
+        verbose_name='Kullanıcı',
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='compared_by',
+        verbose_name='Ürün',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Karşılaştırma Ürünü'
+        verbose_name_plural = 'Karşılaştırma Ürünleri'
+        ordering = ['created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'product'],
+                name='unique_compare_product_per_user',
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.user} - {self.product.name}'
+
+
 class HeroCampaign(models.Model):
     """Homepage campaign shown in the scrolling promotion board."""
 
@@ -304,20 +461,45 @@ class CartItem(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Ürün',
     )
+    variant = models.ForeignKey(
+        ProductVariant,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cart_items',
+        verbose_name='Varyant',
+    )
     quantity = models.PositiveIntegerField(default=1, verbose_name='Adet')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = 'Sepet Ürünü'
         verbose_name_plural = 'Sepet Ürünleri'
-        unique_together = ('cart', 'product')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['cart', 'product', 'variant'],
+                name='unique_cart_product_variant',
+            ),
+        ]
 
     def __str__(self) -> str:
         return f'{self.product.name} x{self.quantity}'
 
     @property
     def line_total(self) -> Decimal:
-        return self.product.effective_price * self.quantity
+        return self.unit_price * self.quantity
+
+    @property
+    def unit_price(self) -> Decimal:
+        if self.variant_id:
+            return self.variant.effective_price
+        return self.product.effective_price
+
+    @property
+    def available_stock(self) -> int:
+        if self.variant_id:
+            return self.variant.stock
+        return self.product.stock
 
 
 class CustomerAddress(models.Model):
@@ -621,6 +803,63 @@ class OrderPhoneNotification(models.Model):
         return f'Sipariş #{self.order_id} - {self.phone}'
 
 
+class OrderServiceRequest(models.Model):
+    """Customer cancellation or return request for an order."""
+
+    class RequestType(models.TextChoices):
+        CANCEL = 'cancel', 'İptal Talebi'
+        RETURN = 'return', 'İade Talebi'
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Beklemede'
+        APPROVED = 'approved', 'Onaylandı'
+        REJECTED = 'rejected', 'Reddedildi'
+        COMPLETED = 'completed', 'Tamamlandı'
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='service_requests',
+        verbose_name='Sipariş',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='order_service_requests',
+        verbose_name='Kullanıcı',
+    )
+    request_type = models.CharField(
+        max_length=12,
+        choices=RequestType.choices,
+        verbose_name='Talep Tipi',
+    )
+    reason = models.CharField(max_length=160, verbose_name='Sebep')
+    description = models.TextField(blank=True, verbose_name='Açıklama')
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.PENDING,
+        verbose_name='Durum',
+    )
+    admin_note = models.TextField(blank=True, verbose_name='Yönetici Notu')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'İade/İptal Talebi'
+        verbose_name_plural = 'İade/İptal Talepleri'
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'request_type'],
+                name='unique_order_service_request_type',
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f'Sipariş #{self.order_id} - {self.get_request_type_display()}'
+
+
 class ShippingCompany(models.Model):
     """Shipping company used for order tracking."""
 
@@ -774,6 +1013,49 @@ class ShipmentEvent(models.Model):
         return f'{self.get_status_display()} - {self.happened_at:%d.%m.%Y %H:%M}'
 
 
+class ProductQuestion(models.Model):
+    """Customer question and seller/admin answer shown on product detail pages."""
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='questions',
+        verbose_name='Ürün',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='product_questions',
+        verbose_name='Soran Kullanıcı',
+    )
+    question = models.TextField(verbose_name='Soru')
+    answer = models.TextField(blank=True, verbose_name='Cevap')
+    answered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='answered_product_questions',
+        verbose_name='Cevaplayan',
+    )
+    is_public = models.BooleanField(default=True, verbose_name='Yayında')
+    created_at = models.DateTimeField(auto_now_add=True)
+    answered_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Ürün Soru-Cevap'
+        verbose_name_plural = 'Ürün Soru-Cevapları'
+        ordering = ['-created_at']
+
+    def __str__(self) -> str:
+        return f'{self.product.name} - {self.user}'
+
+    def save(self, *args, **kwargs):
+        if self.answer and not self.answered_at:
+            self.answered_at = timezone.now()
+        super().save(*args, **kwargs)
+
+
 class OrderItem(models.Model):
     """Individual item within an order, snapshot of product at purchase time."""
 
@@ -790,6 +1072,8 @@ class OrderItem(models.Model):
         verbose_name='Ürün',
     )
     product_name = models.CharField(max_length=300, verbose_name='Ürün Adı')
+    variant_name = models.CharField(max_length=220, blank=True, verbose_name='Varyant')
+    variant_sku = models.CharField(max_length=80, blank=True, verbose_name='Varyant Stok Kodu')
     price = models.DecimalField(
         max_digits=10,
         decimal_places=2,

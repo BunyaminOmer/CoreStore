@@ -23,6 +23,33 @@
         </div>
     </div>
 
+    {% if vendor_results %}
+    <div class="vendor-search-strip">
+        <div class="vendor-search-strip__head">
+            <strong><i class="bi bi-shop"></i> Satıcılar</strong>
+            <span>{{ vendor_results|length }} sonuç</span>
+        </div>
+        <div class="vendor-search-grid">
+            {% for vendor in vendor_results %}
+            <a href="{% url 'store:vendor_detail' vendor.slug %}" class="vendor-search-card">
+                {% if vendor.logo %}
+                <img src="{{ vendor.logo.url }}" alt="{{ vendor.store_name }}">
+                {% else %}
+                <span><i class="bi bi-shop"></i></span>
+                {% endif %}
+                <div>
+                    <strong>{{ vendor.store_name }}</strong>
+                    <small>{{ vendor.description|truncatechars:90|default:'Onaylı CoreLogic Store satıcısı' }}</small>
+                </div>
+                <i class="bi bi-chevron-right"></i>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% include 'store/partials/product_filters.html' %}
+
     <!-- Results -->
     <div class="row g-4">
         {% for product in products %}
@@ -32,6 +59,7 @@
                 {% if product.discount_price %}
                 <span class="sale-badge">İndirim</span>
                 {% endif %}
+                {% include 'store/partials/product_card_actions.html' with product=product %}
 
                 <div class="product-card__img">
                     {% if product.image %}

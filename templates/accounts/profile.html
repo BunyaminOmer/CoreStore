@@ -230,6 +230,11 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if active_tab == 'favorites' %}active{% endif %}" id="favorites-tab" data-bs-toggle="tab" data-bs-target="#favorites-tab-pane" type="button" role="tab" aria-controls="favorites-tab-pane" aria-selected="{% if active_tab == 'favorites' %}true{% else %}false{% endif %}">
+                        <i class="bi bi-heart me-2"></i>Favorilerim
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link {% if active_tab == 'account' %}active{% endif %}" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit-tab-pane" type="button" role="tab" aria-controls="edit-tab-pane" aria-selected="{% if active_tab == 'account' %}true{% else %}false{% endif %}">
                         <i class="bi bi-person-lines-fill me-2"></i>Hesap Ayarları
                     </button>
@@ -291,10 +296,25 @@
                                         <span class="text-muted small d-block">Ödenen Tutar</span>
                                         <span class="fw-bold text-primary fs-5">{{ order.total_amount|currency }}</span>
                                     </div>
-                                    <a href="{% url 'store:order_success' order.id %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                                        Detayları Gör
-                                    </a>
+                                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                                        <a href="{% url 'store:order_receipt_pdf' order.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                                        </a>
+                                        <a href="{% url 'store:order_success' order.id %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                                            Detayları Gör
+                                        </a>
+                                    </div>
                                 </div>
+                                {% if order.service_requests.all %}
+                                <div class="mt-3 d-flex flex-column gap-2">
+                                    {% for request_item in order.service_requests.all %}
+                                    <div class="small bg-white border rounded-3 p-2">
+                                        <strong>{{ request_item.get_request_type_display }}:</strong>
+                                        {{ request_item.get_status_display }} · {{ request_item.reason }}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
                             </div>
                             {% endfor %}
                         </div>
@@ -305,6 +325,57 @@
                             <p class="text-muted mb-4">Milyonlarca ürün arasından dilediğinizi seçin ve alışverişe başlayın.</p>
                             <a href="{% url 'store:home' %}" class="btn btn-accent px-5 py-2 rounded-pill shadow-sm fw-bold">Alışverişe Başla</a>
                         </div>
+                    {% endif %}
+                </div>
+
+                <!-- Favorites Tab -->
+                <div class="tab-pane fade {% if active_tab == 'favorites' %}show active{% endif %}" id="favorites-tab-pane" role="tabpanel" aria-labelledby="favorites-tab" tabindex="0">
+                    {% if favorites %}
+                    <div class="row g-3">
+                        {% for favorite in favorites %}
+                        <div class="col-md-6">
+                            <div class="bg-white rounded-4 shadow-sm border p-3 h-100">
+                                <div class="d-flex gap-3">
+                                    {% if favorite.product.image %}
+                                    <img src="{{ favorite.product.image.url }}" alt="{{ favorite.product.name }}" class="rounded-3" style="width:86px;height:86px;object-fit:cover;">
+                                    {% else %}
+                                    <div class="rounded-3 bg-light d-flex align-items-center justify-content-center" style="width:86px;height:86px;">
+                                        <i class="bi bi-image text-muted fs-3"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div class="min-width-0 flex-grow-1">
+                                        <a href="{% url 'store:product_detail' favorite.product.slug %}" class="fw-bold text-dark text-decoration-none d-block mb-1">
+                                            {{ favorite.product.name|truncatechars:54 }}
+                                        </a>
+                                        <small class="text-muted d-block mb-2">{{ favorite.product.vendor.store_name }}</small>
+                                        <strong class="text-primary">
+                                            {% if favorite.product.discount_price %}{{ favorite.product.discount_price|currency }}{% else %}{{ favorite.product.price|currency }}{% endif %}
+                                        </strong>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2 mt-3">
+                                    <button class="btn btn-sm btn-primary rounded-pill flex-grow-1" onclick="addToCart({{ favorite.product.id }})">
+                                        <i class="bi bi-cart-plus"></i> Sepete Ekle
+                                    </button>
+                                    <form method="POST" action="{% url 'store:toggle_favorite' favorite.product.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill">
+                                            <i class="bi bi-heartbreak"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 bg-white rounded-4 shadow-sm border border-light">
+                        <i class="bi bi-heart text-muted mb-3 d-block" style="font-size:4rem;"></i>
+                        <h4 class="fw-bold text-dark mb-2">Favori ürününüz yok</h4>
+                        <p class="text-muted mb-4">Beğendiğiniz ürünleri kalp ikonuyla burada saklayabilirsiniz.</p>
+                        <a href="{% url 'store:home' %}" class="btn btn-accent px-5 py-2 rounded-pill shadow-sm fw-bold">Ürünlere Bak</a>
+                    </div>
                     {% endif %}
                 </div>
                 
@@ -332,7 +403,7 @@
 
         <!-- Sidebar Actions -->
         <div class="col-lg-4">
-            {% if user.is_vendor %}
+            {% if user.vendor_profile.is_approved %}
             <div class="bg-white rounded-4 p-4 shadow-sm text-center border-top border-4 border-success">
                 <i class="bi bi-shop text-success mb-3 d-block" style="font-size: 3rem;"></i>
                 <h5 class="fw-bold">Satıcı Paneli</h5>
@@ -341,7 +412,7 @@
                     Panele Git <i class="bi bi-arrow-right ms-2"></i>
                 </a>
             </div>
-            {% elif not user.is_vendor %}
+            {% else %}
             <div class="vendor-cta-card p-4 p-md-5 shadow-sm text-center">
                 <div class="position-relative z-1">
                     <div class="d-inline-flex align-items-center justify-content-center bg-white text-primary rounded-circle mb-4 shadow-sm" style="width: 70px; height: 70px;">
@@ -356,8 +427,8 @@
                         <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Geniş Müşteri Ağı</li>
                         <li><i class="bi bi-check-circle-fill text-success me-2"></i>Sıfır Komisyon Fırsatı</li>
                     </ul>
-                    <a href="{% url 'vendors:apply' %}" class="btn btn-primary w-100 rounded-pill fw-bold shadow py-3">
-                        Hemen Başvur <i class="bi bi-arrow-right ms-1"></i>
+                    <a href="{% url 'vendors:portal' %}" class="btn btn-primary w-100 rounded-pill fw-bold shadow py-3">
+                        Satıcı Başvurusuna Git <i class="bi bi-arrow-right ms-1"></i>
                     </a>
                 </div>
             </div>
@@ -379,7 +450,12 @@
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('#profileTabs [data-bs-toggle="tab"]').forEach(function (tabButton) {
             tabButton.addEventListener('click', function () {
-                const tabName = tabButton.id === 'edit-tab' ? 'account' : 'orders';
+                const tabMap = {
+                    'edit-tab': 'account',
+                    'favorites-tab': 'favorites',
+                    'orders-tab': 'orders'
+                };
+                const tabName = tabMap[tabButton.id] || 'orders';
                 const nextUrl = new URL(window.location.href);
                 nextUrl.searchParams.set('tab', tabName);
                 window.history.replaceState({}, '', nextUrl.toString());

@@ -20,7 +20,7 @@
                     {% if product and product.image %}
                         <div class="text-center mb-4 pb-4 border-bottom">
                             <img src="{{ product.image.url }}" alt="Mevcut Görsel" class="rounded-4 shadow-sm mb-3" style="width: 200px; height: 200px; object-fit: cover;">
-                            <h6 class="text-muted fw-bold mb-0">Mevcut Ürün Görseli</h6>
+                            <h6 class="text-muted fw-bold mb-0">Mevcut Kapak Görseli</h6>
                         </div>
                     {% endif %}
 
@@ -45,9 +45,60 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label for="{{ form.image.id_for_label }}" class="form-label fw-bold">Ürün Görseli</label>
+                                <label for="{{ form.image.id_for_label }}" class="form-label fw-bold">Kapak Görseli</label>
                                 <input type="file" name="{{ form.image.name }}" id="{{ form.image.id_for_label }}" class="form-control form-control-lg {% if form.image.errors %}is-invalid{% endif %}" accept="image/*">
+                                <div class="form-text">Ürün kartlarında ve listedeki ana görsel olarak görünür.</div>
                                 {% if form.image.errors %}<div class="invalid-feedback">{{ form.image.errors|join:", " }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="border rounded-4 p-3 p-md-4 mb-4 bg-light-subtle">
+                            <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-3">
+                                <div>
+                                    <h5 class="fw-bold mb-1">Ürün Galerisi</h5>
+                                    <p class="text-muted small mb-0">Detay sayfasında kapak görselinin yanında fotoğraf ve video olarak gösterilir.</p>
+                                </div>
+                                <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2">Yeni</span>
+                            </div>
+
+                            {% if product and product.media.all %}
+                            <div class="row g-3 mb-4">
+                                {% for media in product.media.all %}
+                                <div class="col-6 col-md-4">
+                                    <label class="d-block border rounded-4 bg-white p-2 h-100">
+                                        <div class="ratio ratio-1x1 rounded-3 overflow-hidden bg-light mb-2">
+                                            {% if media.is_video %}
+                                                <video src="{{ media.file.url }}" muted controls style="object-fit:cover;"></video>
+                                            {% else %}
+                                                <img src="{{ media.file.url }}" alt="{{ media.title|default:product.name }}" style="object-fit:cover;">
+                                            {% endif %}
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="delete_media" value="{{ media.id }}" id="delete-media-{{ media.id }}">
+                                            <span class="form-check-label small fw-bold" for="delete-media-{{ media.id }}">
+                                                Sil
+                                            </span>
+                                        </div>
+                                        <small class="text-muted d-block text-truncate">{{ media.get_media_type_display }}{% if media.title %} - {{ media.title }}{% endif %}</small>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            <div class="row g-4">
+                                <div class="col-md-7">
+                                    <label for="{{ form.gallery_images.id_for_label }}" class="form-label fw-bold">Ek Fotoğraflar</label>
+                                    {{ form.gallery_images }}
+                                    <div class="form-text">{{ form.gallery_images.help_text }}</div>
+                                    {% if form.gallery_images.errors %}<div class="text-danger small mt-1">{{ form.gallery_images.errors|join:", " }}</div>{% endif %}
+                                </div>
+                                <div class="col-md-5">
+                                    <label for="{{ form.product_video.id_for_label }}" class="form-label fw-bold">Ürün Videosu</label>
+                                    {{ form.product_video }}
+                                    <div class="form-text">{{ form.product_video.help_text }}</div>
+                                    {% if form.product_video.errors %}<div class="text-danger small mt-1">{{ form.product_video.errors|join:", " }}</div>{% endif %}
+                                </div>
                             </div>
                         </div>
 
@@ -76,6 +127,15 @@
                             <label for="{{ form.description.id_for_label }}" class="form-label fw-bold">Ürün Açıklaması</label>
                             <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" rows="5" class="form-control {% if form.description.errors %}is-invalid{% endif %}">{{ form.description.value|default:'' }}</textarea>
                             {% if form.description.errors %}<div class="invalid-feedback">{{ form.description.errors|join:", " }}</div>{% endif %}
+                        </div>
+
+                        <div class="border rounded-4 p-3 p-md-4 mb-4 bg-white">
+                            <h5 class="fw-bold mb-1">Ürün Varyantları</h5>
+                            <p class="text-muted small mb-3">Renk, depolama, beden gibi seçenekleri satır satır ekleyin.</p>
+                            <label for="{{ form.variant_rows.id_for_label }}" class="form-label fw-bold">Varyant Satırları</label>
+                            {{ form.variant_rows }}
+                            <div class="form-text">{{ form.variant_rows.help_text }}</div>
+                            {% if form.variant_rows.errors %}<div class="text-danger small mt-1">{{ form.variant_rows.errors|join:", " }}</div>{% endif %}
                         </div>
 
                         <div class="mb-5">

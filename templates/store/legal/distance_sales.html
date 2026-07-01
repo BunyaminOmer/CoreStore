@@ -1,0 +1,150 @@
+{% extends 'store/legal/base_legal.html' %}
+
+{% block legal_content %}
+<h1>Mesafeli Satış Sözleşmesi</h1>
+<p class="legal-meta">Yürürlük tarihi: {{ legal.effective_date }} · Son güncelleme: {{ legal.last_updated }}</p>
+
+<p>
+  İşbu Mesafeli Satış Sözleşmesi (“Sözleşme”); <strong>{{ legal.platform_name }}</strong> (“Platform”) üzerinden
+  mesafeli yöntemlerle yapılan satışlarda tarafların hak ve yükümlülüklerini Mesafeli Sözleşmeler Yönetmeliği
+  ve 6502 sayılı Tüketicinin Korunması Hakkında Kanun hükümlerine uygun şekilde düzenler.
+</p>
+
+<h2>MADDE 1 – TARAFLAR</h2>
+
+<h3>1.1. Aracı Hizmet Sağlayıcı (Platform İşletmecisi)</h3>
+<ul>
+  <li>Unvan: <strong>{{ legal.operator_name }}</strong> / <strong>{{ legal.platform_name }}</strong></li>
+  <li>Web: <a href="{{ legal.website }}">{{ legal.website }}</a></li>
+  <li>E-posta: <a href="mailto:{{ legal.support_email }}">{{ legal.support_email }}</a></li>
+  <li>Telefon: {{ legal.support_phone_display }}</li>
+</ul>
+<p>
+  Platform, satıcı ile alıcıyı buluşturan aracı hizmet sağlayıcıdır. Ürünün satış sözleşmesinin tarafı
+  ağırlıklı olarak ilgili onaylı satıcıdır; Platform sipariş, ödeme altyapısı, bilgilendirme ve destek
+  süreçlerini yürütür.
+</p>
+
+<h3>1.2. Alıcı (Tüketici)</h3>
+<p>
+  Platforma üye olan ve sipariş sırasında kimlik, teslimat, fatura ve iletişim bilgilerini giren gerçek
+  veya tüzel kişi. Checkout ekranında girilen bilgiler esas alınır.
+</p>
+
+<h3>1.3. Satıcı</h3>
+<p>
+  Siparişe konu ürünü sunan, Platformda onaylı mağazası bulunan üçüncü taraf işletme. Satıcının ticari
+  unvanı, vergi numarası ve iletişim bilgileri sipariş özeti, fatura ve/veya sipariş bilgilendirme
+  ekranında gösterilir.
+</p>
+
+<h2>MADDE 2 – SÖZLEŞMENİN KONUSU</h2>
+<p>
+  Sözleşmenin konusu; Alıcı’nın Platform üzerinden elektronik ortamda sipariş verdiği mal/hizmetin
+  satışı ve teslimine ilişkin tarafların hak ve yükümlülüklerinin belirlenmesidir. Sipariş onaylandığı
+  anda Sözleşme kurulmuş sayılır.
+</p>
+
+<h2>MADDE 3 – SÖZLEŞME KONUSU MAL/HİZMET BİLGİLERİ</h2>
+<p>Siparişe konu ürün/hizmete ilişkin temel bilgiler:</p>
+<ul>
+  <li>Ürün adı, model/özellikleri, adet ve birim fiyat</li>
+  <li>Varsa indirim, kupon ve taksit/vade farkı bilgileri</li>
+  <li>KDV dahil toplam bedel (checkout ve sipariş özeti ekranında gösterilir)</li>
+  <li>Ürün görselleri ve açıklamaları satıcı tarafından girilir; Platform içerik doğruluğu için makul denetim uygular</li>
+  <li>Stok durumu sipariş anında teyit edilir; yetersiz stokta sipariş tamamlanmaz</li>
+</ul>
+
+<h2>MADDE 4 – FİYAT VE ÖDEME</h2>
+<ul>
+  <li>Toplam bedel, vergiler ve varsa kargo ücreti checkout ekranında ayrıca gösterilir.</li>
+  <li>Ödeme; kredi/banka kartı veya Platformda aktif edilen diğer güvenli ödeme yöntemleri ile tahsil edilir.</li>
+  <li>Taksit seçenekleri kart grubu ve kategori kurallarına göre sunulur; vade farkı varsa checkout’ta açıkça belirtilir.</li>
+  <li>Ödeme onayı alınmadan sipariş kesinleşmez.</li>
+  <li>Platform, kart bilgilerini kendi sisteminde kalıcı olarak saklamaz; ödeme lisanslı kuruluş altyapısı ile işlenir.</li>
+</ul>
+
+<h2>MADDE 5 – TESLİMAT</h2>
+<ul>
+  <li>Teslimat adresi Alıcı tarafından checkout sırasında bildirilir.</li>
+  <li>Kargo işlemleri {{ legal.shipping_partner }} ve/veya satıcının anlaşmalı kargo firması aracılığıyla yürütülür.</li>
+  <li>Tahmini teslimat süresi ürün, stok, mesafe ve kargo yoğunluğuna göre değişir; sipariş sonrası bilgilendirme linki ile takip edilebilir.</li>
+  <li>Teslimat sırasında dış ambalajda hasar varsa tutanak tutulması ve derhal Platform/satıcıya bildirilmesi önerilir.</li>
+  <li>Alıcı’nın teslimat adresinde bulunmaması veya yanlış adres vermesi nedeniyle oluşan gecikmelerden Platform sorumlu tutulamaz; masraflar Alıcı’ya ait olabilir.</li>
+</ul>
+
+<h2>MADDE 6 – CAYMA HAKKI</h2>
+<p>
+  Alıcı, malın teslim tarihinden itibaren <strong>{{ legal.withdrawal_days }} gün</strong> içinde cayma hakkını
+  kullanabilir. Cayma hakkının kullanımı, süresi, iade süreci ve istisnalar
+  <a href="{% url 'store:cancellation_policy' %}">İptal ve İade Koşulları</a> sayfasında ayrıntılı olarak düzenlenmiştir.
+  Cayma bildiriminin süresinde Platforma ulaşması yeterlidir.
+</p>
+<p>Cayma hakkının kullanılamayacağı haller Mesafeli Sözleşmeler Yönetmeliği m.15 ve ilgili mevzuat uyarınca geçerlidir.</p>
+
+<h2>MADDE 7 – ALICI’NIN YÜKÜMLÜLÜKLERİ</h2>
+<ul>
+  <li>Checkout sırasında doğru ve güncel bilgi vermek</li>
+  <li>Ödeme yükümlülüğünü yerine getirmek</li>
+  <li>Teslimat sırasında ürünü kontrol etmek; ayıp/hasar durumunda bildirimde bulunmak</li>
+  <li>Cayma/iade süreçlerinde ürünü kullanım talimatlarına uygun şekilde iade etmek</li>
+  <li>Platform kullanım şartlarına ve mevzuata aykırı işlem yapmamak</li>
+</ul>
+
+<h2>MADDE 8 – SATICI’NIN YÜKÜMLÜLÜKLERİ</h2>
+<ul>
+  <li>Ürünü siparişe uygun, ayıpsız ve eksiksiz şekilde hazırlamak</li>
+  <li>Yürürlükteki mevzuata uygun fatura düzenlemek</li>
+  <li>Belirtilen sürede kargoya teslim etmek</li>
+  <li>Garanti, servis ve ürün bilgilerini doğru sunmak</li>
+  <li>Cayma hakkı ve ayıplı mal hükümlerine uymak</li>
+</ul>
+
+<h2>MADDE 9 – PLATFORM’UN YÜKÜMLÜLÜKLERİ</h2>
+<ul>
+  <li>Sipariş, ödeme ve bilgilendirme altyapısını işletmek</li>
+  <li>Onaylı satıcıları makul ölçüde denetlemek</li>
+  <li>Alıcı taleplerini ve iade/iptal bildirimlerini yönlendirmek</li>
+  <li>Kişisel verileri <a href="{% url 'store:privacy_policy' %}">Gizlilik Politikası</a> kapsamında korumak</li>
+  <li>Mevzuat gereği saklama, kayıt ve bilgilendirme yükümlülüklerini yerine getirmek</li>
+</ul>
+
+<h2>MADDE 10 – SORUMLULUK SINIRI</h2>
+<p>
+  Platform, aracı hizmet sağlayıcı sıfatıyla teknik altyapıyı sağlar. Ürünün ayıplı olması, garanti kapsamı,
+  yanlış/eksik gönderim gibi satışa ilişkin asli yükümlülükler öncelikle satıcıya aittir. Platform’un
+  kusuru hâlinde tüketicinin 6502 sayılı Kanun’dan doğan hakları saklıdır.
+</p>
+
+<h2>MADDE 11 – MÜCBİR SEBEP</h2>
+<p>
+  Doğal afet, savaş, grev, altyapı arızası, genel internet kesintisi, salgın, resmi makam kararları gibi
+  tarafların kontrolü dışındaki olaylar mücbir sebep sayılır. Süre uzatımı veya sözleşmenin askıya alınması
+  söz konusu olabilir; tüketici mevzuatından doğan haklar saklıdır.
+</p>
+
+<h2>MADDE 12 – UYUŞMAZLIKLARIN ÇÖZÜMÜ</h2>
+<p>
+  İşbu Sözleşme Türkiye Cumhuriyeti kanunlarına tabidir. Uyuşmazlıklarda Alıcı, Tüketici Hakem Heyetlerine
+  veya Tüketici Mahkemelerine başvurabilir. Parasal sınırlar her yıl Bakanlık tarafından güncellenir.
+</p>
+<p>
+  Şikâyet ve talepler: <a href="mailto:{{ legal.complaint_email }}">{{ legal.complaint_email }}</a> ·
+  {{ legal.support_phone_display }}
+</p>
+
+<h2>MADDE 13 – YÜRÜRLÜK VE KABUL</h2>
+<p>
+  Alıcı, Platform üzerinde siparişi onaylamadan önce işbu Sözleşme’yi, ön bilgilendirme formunu niteliğindeki
+  checkout bilgilerini, <a href="{% url 'store:cancellation_policy' %}">İptal ve İade Koşulları</a> ile
+  <a href="{% url 'store:privacy_policy' %}">Gizlilik Politikası</a>’nı okuduğunu, anladığını ve elektronik
+  ortamda gerekli teyidi verdiğini kabul eder. Siparişin onaylanması ile Sözleşme yürürlüğe girer.
+</p>
+
+<h2>MADDE 14 – SÖZLEŞME DEĞİŞİKLİKLERİ</h2>
+<p>
+  Platform, mevzuat değişiklikleri veya hizmet kapsamındaki güncellemeler nedeniyle Sözleşme metnini
+  değiştirebilir. Güncel metin yayımlandığı tarihte yürürlüğe girer; devam eden siparişler için sipariş
+  anındaki hükümler esas alınır.
+</p>
+{% endblock %}

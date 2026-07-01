@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load store_tags %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+        <div>
+            <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 mb-2">Hizmet Merkezi</span>
+            <h1 class="fw-bold mb-1">Hizmet ve Destek Paketleri</h1>
+            <p class="text-muted mb-0">Kurulum, toplu ürün yükleme, vitrin tasarımı ve öncelikli destek taleplerini buradan açın.</p>
+        </div>
+        <a href="{% url 'vendors:dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-arrow-left me-2"></i>Panele Dön
+        </a>
+    </div>
+
+    <div class="row g-4">
+        {% for package in packages %}
+        <div class="col-lg-4 col-md-6">
+            <div class="bg-white rounded-4 shadow-sm border {% if package.is_featured %}border-success{% else %}border-custom{% endif %} p-4 h-100">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <i class="bi bi-headset text-success fs-2"></i>
+                    {% if package.is_featured %}<span class="badge bg-success">Popüler</span>{% endif %}
+                </div>
+                <h5 class="fw-bold">{{ package.name }}</h5>
+                <p class="small text-muted" style="min-height: 76px;">{{ package.description }}</p>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-bold fs-4">{{ package.price|currency }}</span>
+                    <span class="small text-muted">{{ package.delivery_days }} gün</span>
+                </div>
+                <form method="post" class="d-grid gap-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="package_id" value="{{ package.id }}">
+                    {{ form.request_note }}
+                    <button type="submit" class="btn btn-outline-success rounded-pill">Talep Aç</button>
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="bg-white rounded-4 shadow-sm border border-custom p-5 text-center text-muted">Henüz aktif hizmet paketi yok.</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="bg-white rounded-4 shadow-sm border border-custom p-4 mt-5">
+        <h5 class="fw-bold mb-3">Destek Taleplerim</h5>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Paket</th><th>Durum</th><th>Not</th><th>Tarih</th></tr>
+                </thead>
+                <tbody>
+                    {% for service_order in service_orders %}
+                    <tr>
+                        <td class="fw-semibold">{{ service_order.package.name }}</td>
+                        <td><span class="badge bg-light text-dark">{{ service_order.get_status_display }}</span></td>
+                        <td class="text-muted">{{ service_order.request_note|default:"-"|truncatechars:80 }}</td>
+                        <td>{{ service_order.created_at|date:"d M Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center text-muted py-4">Henüz hizmet talebi açmadınız.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

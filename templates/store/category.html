@@ -35,6 +35,8 @@
   </div>
   {% endif %}
 
+  {% include 'store/partials/product_filters.html' %}
+
   <!-- Products Grid -->
   <div class="row g-4">
     {% for product in products %}
@@ -44,6 +46,7 @@
         {% if product.discount_price %}
           <span class="sale-badge">İndirim</span>
         {% endif %}
+        {% include 'store/partials/product_card_actions.html' with product=product %}
 
         <!-- Image -->
         <div class="product-card__img">

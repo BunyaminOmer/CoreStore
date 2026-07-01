@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+        <div>
+            <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 mb-2">Satıcı Merkezi</span>
+            <h1 class="fw-bold mb-1">İşletme Profili</h1>
+            <p class="text-muted mb-0">Abonelik, reklam ve hizmet talepleri için resmi işletme bilgilerinizi tamamlayın.</p>
+        </div>
+        <a href="{% url 'vendors:dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-arrow-left me-2"></i>Panele Dön
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="bg-white rounded-4 shadow-sm border border-custom p-4">
+                <form method="post" class="row g-3">
+                    {% csrf_token %}
+                    {% for field in form %}
+                        <div class="{% if field.name == 'address' %}col-12{% else %}col-md-6{% endif %}">
+                            <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                    {% if form.non_field_errors %}
+                        <div class="col-12 text-danger small">{{ form.non_field_errors }}</div>
+                    {% endif %}
+                    <div class="col-12 d-flex justify-content-end gap-2 pt-2">
+                        <a href="{% url 'vendors:dashboard' %}" class="btn btn-light rounded-pill px-4">Vazgeç</a>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4">
+                            <i class="bi bi-check2-circle me-2"></i>Profili Kaydet
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="bg-dark text-white rounded-4 shadow-sm p-4 h-100">
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <div class="bg-white bg-opacity-10 rounded-3 p-3"><i class="bi bi-shield-check fs-3"></i></div>
+                    <div>
+                        <h5 class="fw-bold mb-1">Durum</h5>
+                        {% if profile and profile.is_complete %}
+                            <span class="badge bg-success">Profil tamamlandı</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Bilgi bekleniyor</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <p class="text-white-50 mb-4">Bu profil satıcı paketleri, sponsorlu ürün başvuruları ve hizmet destek talepleri için temel kayıt olarak kullanılır.</p>
+                <div class="border-top border-light border-opacity-25 pt-3 small text-white-50">
+                    Yönetici onayı gerektiren alanlarda durum değişiklikleri admin panelinden yapılır.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

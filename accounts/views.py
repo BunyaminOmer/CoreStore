@@ -17,6 +17,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 from .forms import CustomUserCreationForm, EmailTwoFactorForm, ProfileUpdateForm
 from .models import CustomUser, EmailTwoFactorCode
+from store.models import FavoriteProduct
 
 
 logger = logging.getLogger(__name__)
@@ -242,17 +243,23 @@ def profile_view(request):
         form = ProfileUpdateForm(instance=request.user)
 
     active_tab = request.GET.get('tab', 'orders')
-    if active_tab not in {'orders', 'account'}:
+    if active_tab not in {'orders', 'account', 'favorites'}:
         active_tab = 'orders'
         
     orders = request.user.orders.select_related(
         'shipment',
         'shipment__company',
         'shipment__current_station',
-    ).prefetch_related('shipment__events').order_by('-created_at')
+    ).prefetch_related('shipment__events', 'service_requests').order_by('-created_at')
+    favorites = FavoriteProduct.objects.filter(user=request.user).select_related(
+        'product',
+        'product__vendor',
+        'product__category',
+    )
     
     return render(request, 'accounts/profile.html', {
         'active_tab': active_tab,
         'form': form,
         'orders': orders,
+        'favorites': favorites,
     })

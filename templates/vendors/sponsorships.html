@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load store_tags %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+        <div>
+            <span class="badge bg-warning-subtle text-warning rounded-pill px-3 py-2 mb-2">Reklam Araçları</span>
+            <h1 class="fw-bold mb-1">Sponsorlu Ürünler</h1>
+            <p class="text-muted mb-0">Seçtiğiniz ürünü ana sayfa, kategori veya arama alanlarında öne çıkarma talebi oluşturun.</p>
+        </div>
+        <a href="{% url 'vendors:dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-arrow-left me-2"></i>Panele Dön
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="bg-white rounded-4 shadow-sm border border-custom p-4">
+                <h5 class="fw-bold mb-3">Yeni Kampanya</h5>
+                <div class="alert alert-light border rounded-4 small mb-3">
+                    Aktif paket: <strong>{{ active_subscription.plan.name }}</strong> · Sponsorlu ürün hakkı:
+                    <strong>{{ active_subscription.plan.sponsored_product_quota }}</strong>
+                </div>
+                <form method="post" class="d-grid gap-3">
+                    {% csrf_token %}
+                    {% for field in form %}
+                        <div>
+                            <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary rounded-pill">
+                        <i class="bi bi-send me-2"></i>Talep Oluştur
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="bg-white rounded-4 shadow-sm border border-custom p-4">
+                <h5 class="fw-bold mb-3">Kampanyalarım</h5>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr><th>Ürün</th><th>Alan</th><th>Bütçe</th><th>Durum</th><th>Tarih</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for campaign in campaigns %}
+                            <tr>
+                                <td class="fw-semibold">{{ campaign.product.name|truncatechars:32 }}</td>
+                                <td>{{ campaign.get_placement_display }}</td>
+                                <td>{{ campaign.daily_budget|currency }}</td>
+                                <td><span class="badge bg-light text-dark">{{ campaign.get_status_display }}</span></td>
+                                <td class="small text-muted">{{ campaign.starts_at|date:"d M" }} - {{ campaign.ends_at|date:"d M" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-5">Henüz sponsorlu ürün talebiniz yok.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

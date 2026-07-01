@@ -1,7 +1,8 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from store.models import (
@@ -11,10 +12,13 @@ from store.models import (
     CardInstallmentGroup,
     Category,
     CategoryInstallmentRule,
+    CompareProduct,
     CustomerAddress,
+    FavoriteProduct,
     InstallmentRate,
     Order,
     OrderPhoneNotification,
+    OrderServiceRequest,
     Product,
     ProductReview,
     Shipment,
@@ -22,6 +26,41 @@ from store.models import (
     SiteFeedback,
 )
 from vendors.models import Vendor
+
+
+@override_settings(
+    DOMAIN='corelogic.store',
+    CUSTOM_DOMAIN_HOSTS=['corelogic.store', 'www.corelogic.store'],
+    PLATFORM_HOSTS=['.onrender.com'],
+    ALLOWED_HOSTS=['corelogic.store', 'www.corelogic.store', '.onrender.com', 'testserver'],
+)
+class CanonicalHostRedirectTests(TestCase):
+    def test_platform_host_redirects_to_public_domain(self):
+        response = self.client.get(
+            '/vendor/apply/?source=test',
+            HTTP_HOST='corelogic-store.onrender.com',
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response['Location'], 'https://corelogic.store/vendor/apply/?source=test')
+
+    def test_public_domain_is_not_redirected_by_canonical_middleware(self):
+        response = self.client.get(
+            '/',
+            HTTP_HOST='corelogic.store',
+            secure=True,
+        )
+
+        self.assertNotEqual(response.status_code, 301)
+
+
+class HealthCheckTests(TestCase):
+    def test_health_check_is_lightweight(self):
+        response = self.client.get(reverse('health_check'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b'ok')
 
 
 class ShipmentTrackingTests(TestCase):
@@ -106,6 +145,11 @@ class CheckoutAddressBillingTests(TestCase):
             is_active=True,
         )
 
+    @override_settings(
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        ADMIN_NOTIFICATION_EMAIL='admin@example.com',
+        DEFAULT_FROM_EMAIL='CoreLogic Store <noreply@example.com>',
+    )
     def test_checkout_saves_address_billing_and_phone_notification(self):
         cart = Cart.objects.create(user=self.user)
         CartItem.objects.create(cart=cart, product=self.product, quantity=1)
@@ -140,6 +184,10 @@ class CheckoutAddressBillingTests(TestCase):
         self.assertEqual(order.phone, '05551112233')
         self.assertTrue(CustomerAddress.objects.filter(user=self.user, title='Ev', is_default=True).exists())
         self.assertTrue(OrderPhoneNotification.objects.filter(order=order, phone='05551112233').exists())
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['admin@example.com'])
+        self.assertIn('Yeni sipariş', mail.outbox[0].subject)
+        self.assertIn('Test Ürün x1', mail.outbox[0].body)
 
     def test_checkout_renders_installment_options(self):
         CardBinPrefix.objects.create(
@@ -270,3 +318,102 @@ class ReviewAndFeedbackTests(TestCase):
 
         self.assertRedirects(response, reverse('store:feedback'))
         self.assertTrue(SiteFeedback.objects.filter(email='test@example.com').exists())
+
+
+class CustomerCommerceFeatureTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.user = user_model.objects.create_user(
+            username='featurebuyer',
+            email='featurebuyer@example.com',
+            password='testpass123',
+        )
+        vendor_user = user_model.objects.create_user(
+            username='featurevendor',
+            email='featurevendor@example.com',
+            password='testpass123',
+        )
+        self.vendor = Vendor.objects.create(
+            user=vendor_user,
+            store_name='Feature Store',
+            slug='feature-store',
+            tax_number='1234567890',
+            is_approved=True,
+        )
+        self.category = Category.objects.create(name='Telefon', slug='telefon', is_active=True)
+        self.product = Product.objects.create(
+            vendor=self.vendor,
+            category=self.category,
+            name='Test Telefon',
+            slug='test-telefon',
+            price='15000.00',
+            discount_price='14000.00',
+            stock=4,
+            is_active=True,
+            is_approved=True,
+        )
+
+    def test_customer_can_toggle_favorite_and_compare_product(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse('store:toggle_favorite', args=[self.product.id]))
+        self.assertRedirects(response, reverse('store:home'))
+        self.assertTrue(FavoriteProduct.objects.filter(user=self.user, product=self.product).exists())
+
+        response = self.client.post(reverse('store:add_compare', args=[self.product.id]))
+        self.assertRedirects(response, reverse('store:home'))
+        self.assertTrue(CompareProduct.objects.filter(user=self.user, product=self.product).exists())
+
+        response = self.client.get(reverse('store:compare'))
+        self.assertContains(response, 'Test Telefon')
+
+    def test_category_filters_products(self):
+        Product.objects.create(
+            vendor=self.vendor,
+            category=self.category,
+            name='Pahalı Telefon',
+            slug='pahali-telefon',
+            price='50000.00',
+            stock=0,
+            is_active=True,
+            is_approved=True,
+        )
+
+        response = self.client.get(reverse('store:category', args=[self.category.slug]), {
+            'max_price': '20000',
+            'in_stock': '1',
+            'on_sale': '1',
+        })
+
+        self.assertContains(response, 'Test Telefon')
+        self.assertNotContains(response, 'Pahalı Telefon')
+
+    @override_settings(
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        ADMIN_NOTIFICATION_EMAIL='admin@example.com',
+    )
+    def test_customer_can_create_order_return_request_and_download_pdf(self):
+        order = Order.objects.create(
+            user=self.user,
+            total_amount='14000.00',
+            status=Order.Status.DELIVERED,
+            shipping_address='Test teslimat adresi',
+            phone='05550000000',
+            billing_full_name='Feature Buyer',
+            billing_address='Test fatura adresi',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse('store:order_service_request', args=[order.id]), {
+            'request_type': OrderServiceRequest.RequestType.RETURN,
+            'reason': 'Ürün beklentimi karşılamadı',
+            'description': 'İade süreci başlatılsın.',
+        })
+
+        self.assertRedirects(response, reverse('store:order_success', args=[order.id]))
+        self.assertTrue(OrderServiceRequest.objects.filter(order=order, user=self.user).exists())
+        self.assertEqual(len(mail.outbox), 1)
+
+        response = self.client.get(reverse('store:order_receipt_pdf', args=[order.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')

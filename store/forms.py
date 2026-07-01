@@ -1,5 +1,5 @@
 from django import forms
-from .models import CustomerAddress, Order, ProductReview, SiteFeedback
+from .models import CustomerAddress, Order, OrderServiceRequest, ProductQuestion, ProductReview, SiteFeedback
 
 
 class CheckoutForm(forms.Form):
@@ -169,6 +169,37 @@ class ProductReviewForm(forms.ModelForm):
                 'rows': 4,
                 'placeholder': 'Ürün hakkındaki deneyiminizi yazın.',
                 'class': 'form-control-custom',
+            }),
+        }
+
+
+class ProductQuestionForm(forms.ModelForm):
+    class Meta:
+        model = ProductQuestion
+        fields = ['question']
+        widgets = {
+            'question': forms.Textarea(attrs={
+                'rows': 3,
+                'placeholder': 'Ürün hakkında merak ettiğiniz şeyi yazın.',
+                'class': 'form-control-custom',
+            }),
+        }
+
+
+class OrderServiceRequestForm(forms.ModelForm):
+    class Meta:
+        model = OrderServiceRequest
+        fields = ['request_type', 'reason', 'description']
+        widgets = {
+            'request_type': forms.Select(attrs={'class': 'form-select'}),
+            'reason': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Örn: Yanlış ürün, vazgeçtim, hasarlı geldi',
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Talebinizle ilgili kısa bir açıklama yazın.',
             }),
         }
 

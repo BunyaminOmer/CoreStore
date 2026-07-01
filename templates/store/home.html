@@ -14,8 +14,8 @@
         <h1>Güvenilir satıcılardan hızlı alışveriş.</h1>
         <p>Ürünleri kategorilere göre keşfet, fiyatı net gör, sepete hızlıca ekle.</p>
         <div class="home-hero__actions">
-          <a href="#products" class="home-btn home-btn--primary">Alışverişe başla</a>
-          <a href="#categories" class="home-btn home-btn--secondary">Kategoriler</a>
+          <a href="#products" class="home-btn home-btn--primary"><i class="bi bi-bag" style="margin-right: 8px;"></i> Alışverişe başla</a>
+          <a href="#categories" class="home-btn home-btn--secondary"><i class="bi bi-grid" style="margin-right: 8px;"></i> Kategoriler</a>
         </div>
       </div>
 
@@ -132,6 +132,60 @@
 </section>
 {% endif %}
 
+{% if sponsored_campaigns or home_ads %}
+<section class="home-sponsored" aria-label="Sponsorlu alanlar">
+  <div class="container">
+    <div class="home-section__head">
+      <div>
+        <span class="home-eyebrow">Sponsorlu</span>
+        <h2>Öne çıkarılan fırsatlar</h2>
+      </div>
+    </div>
+    <div class="home-sponsored__grid">
+      {% for campaign in sponsored_campaigns %}
+      <a href="{% url 'store:product_detail' campaign.product.slug %}" class="home-sponsored-card">
+        <span class="home-sponsored-card__media">
+          {% if campaign.product.image %}
+            <img src="{{ campaign.product.image.url }}" alt="{{ campaign.product.name }}" loading="lazy">
+          {% else %}
+            <i class="bi bi-image"></i>
+          {% endif %}
+        </span>
+        <span class="home-sponsored-card__body">
+          <small>{{ campaign.product.vendor.store_name }}</small>
+          <strong>{{ campaign.title|default:campaign.product.name|truncatechars:52 }}</strong>
+          <span>
+            {% if campaign.product.discount_price %}
+              {{ campaign.product.discount_price|currency }}
+            {% else %}
+              {{ campaign.product.price|currency }}
+            {% endif %}
+          </span>
+        </span>
+      </a>
+      {% endfor %}
+
+      {% for ad in home_ads %}
+      <a href="{{ ad.target_url|default:'#products' }}" class="home-sponsored-card home-sponsored-card--ad">
+        <span class="home-sponsored-card__media">
+          {% if ad.image %}
+            <img src="{{ ad.image.url }}" alt="{{ ad.title }}" loading="lazy">
+          {% else %}
+            <i class="bi bi-badge-ad"></i>
+          {% endif %}
+        </span>
+        <span class="home-sponsored-card__body">
+          <small>{{ ad.vendor.store_name }}</small>
+          <strong>{{ ad.title|truncatechars:52 }}</strong>
+          {% if ad.description %}<em>{{ ad.description|truncatechars:80 }}</em>{% endif %}
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
 <section id="categories" class="home-section home-section--tight">
   <div class="container">
     <div class="home-section__head">
@@ -199,6 +253,7 @@
     <div class="home-product-grid">
       {% for card in featured_product_cards %}
       <article class="home-product">
+        {% include 'store/partials/product_card_actions.html' with product=card.product %}
         <a href="{% url 'store:product_detail' card.product.slug %}" class="home-product__media">
           {% if card.product.discount_price %}
             <span class="home-product__badge">İndirim</span>

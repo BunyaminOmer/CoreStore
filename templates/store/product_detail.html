@@ -26,21 +26,73 @@
   <!-- Main content -->
   <div class="row g-4 g-lg-5" style="background:var(--bg-card); border-radius:var(--radius); border:1.5px solid var(--border); padding:1.75rem; margin:0;">
 
-    <!-- ── Image ── -->
+    <!-- ── Media gallery ── -->
     <div class="col-lg-6">
-      {% if product.image %}
-        <img src="{{ product.image.url }}"
-             alt="{{ product.name }}"
-             class="product-detail-img"
-             onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
-        <div class="product-detail-placeholder" hidden>
-          <i class="bi bi-image"></i>
+      <div class="product-gallery">
+        <div class="product-gallery__stage" id="product-gallery-stage">
+          {% if product.image %}
+            <img src="{{ product.image.url }}"
+                 alt="{{ product.name }}"
+                 class="product-detail-img"
+                 onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+            <div class="product-detail-placeholder" hidden>
+              <i class="bi bi-image"></i>
+            </div>
+          {% elif media_items %}
+            {% for media in media_items %}
+              {% if forloop.first %}
+                {% if media.is_video %}
+                  <video src="{{ media.file.url }}" class="product-detail-video" controls playsinline></video>
+                {% else %}
+                  <img src="{{ media.file.url }}"
+                       alt="{{ media.title|default:product.name }}"
+                       class="product-detail-img"
+                       onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                  <div class="product-detail-placeholder" hidden>
+                    <i class="bi bi-image"></i>
+                  </div>
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            <div class="product-detail-placeholder">
+              <i class="bi bi-image"></i>
+            </div>
+          {% endif %}
         </div>
-      {% else %}
-        <div class="product-detail-placeholder">
-          <i class="bi bi-image"></i>
+
+        {% if product.image or media_items %}
+        <div class="product-gallery__thumbs" aria-label="Ürün medya galerisi">
+          {% if product.image %}
+          <button type="button"
+                  class="product-gallery__thumb is-active"
+                  data-gallery-trigger
+                  data-media-type="image"
+                  data-media-src="{{ product.image.url }}"
+                  data-media-alt="{{ product.name }}">
+            <img src="{{ product.image.url }}" alt="{{ product.name }}">
+          </button>
+          {% endif %}
+
+          {% for media in media_items %}
+          <button type="button"
+                  class="product-gallery__thumb {% if not product.image and forloop.first %}is-active{% endif %}"
+                  data-gallery-trigger
+                  data-media-type="{{ media.media_type }}"
+                  data-media-src="{{ media.file.url }}"
+                  data-media-alt="{{ media.title|default:product.name }}">
+            {% if media.is_video %}
+              <span class="product-gallery__video-thumb">
+                <i class="bi bi-play-fill"></i>
+              </span>
+            {% else %}
+              <img src="{{ media.file.url }}" alt="{{ media.title|default:product.name }}">
+            {% endif %}
+          </button>
+          {% endfor %}
         </div>
-      {% endif %}
+        {% endif %}
+      </div>
     </div>
 
     <!-- ── Info ── -->
@@ -58,33 +110,86 @@
       <h1 class="product-title">{{ product.name }}</h1>
 
       <!-- Vendor -->
-      <a href="#" class="product-vendor-link mb-4">
+      <a href="{% url 'store:vendor_detail' product.vendor.slug %}" class="product-vendor-link mb-4">
         <i class="bi bi-shop"></i>
         {{ product.vendor.store_name }}
       </a>
+
+      <div class="product-detail-actions">
+        <form method="POST" action="{% url 'store:toggle_favorite' product.id %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="product-detail-action {% if is_favorite %}is-active{% endif %}">
+            <i class="bi {% if is_favorite %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+            {% if is_favorite %}Favorilerde{% else %}Favorilere Ekle{% endif %}
+          </button>
+        </form>
+        <form method="POST" action="{% if is_compared %}{% url 'store:remove_compare' product.id %}{% else %}{% url 'store:add_compare' product.id %}{% endif %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="product-detail-action {% if is_compared %}is-active{% endif %}">
+            <i class="bi {% if is_compared %}bi-columns-gap{% else %}bi-arrow-left-right{% endif %}"></i>
+            {% if is_compared %}Karşılaştırmada{% else %}Karşılaştır{% endif %}
+          </button>
+        </form>
+        <a href="{% url 'store:compare' %}" class="product-detail-action">
+          <i class="bi bi-layout-three-columns"></i>
+          Listeyi Aç
+        </a>
+      </div>
 
       <!-- Price box -->
       <div class="product-price-box">
         {% if product.discount_price %}
           <div class="d-flex align-items-center gap-2 flex-wrap">
             <span class="product-price-old">{{ product.price|currency }}</span>
-            <span class="product-price-main is-sale">{{ product.discount_price|currency }}</span>
+            <span class="product-price-main is-sale" id="product-price-display">{{ product.discount_price|currency }}</span>
             <span class="product-price-discount-badge">İndirimli</span>
           </div>
         {% else %}
-          <span class="product-price-main">{{ product.price|currency }}</span>
+          <span class="product-price-main" id="product-price-display">{{ product.price|currency }}</span>
         {% endif %}
       </div>
 
+      {% if variants %}
+      <div class="product-variant-panel">
+        <div class="product-variant-panel__head">
+          <strong><i class="bi bi-sliders"></i> Varyant Seçimi</strong>
+          <small>Fiyat ve stok seçime göre değişir</small>
+        </div>
+        <div class="product-variant-options">
+          {% for variant in variants %}
+          <label class="product-variant-option {% if forloop.first %}is-active{% endif %}">
+            <input type="radio"
+                   name="product_variant"
+                   value="{{ variant.id }}"
+                   data-price="{{ variant.effective_price }}"
+                   data-stock="{{ variant.stock }}"
+                   data-label="{{ variant.label }}"
+                   {% if forloop.first %}checked{% endif %}
+                   {% if variant.stock == 0 %}disabled{% endif %}>
+            <span>
+              <strong>{{ variant.label }}</strong>
+              <small>
+                {{ variant.effective_price|currency }}
+                {% if variant.stock > 0 %} · {{ variant.stock }} stok{% else %} · Stok yok{% endif %}
+              </small>
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Stock -->
       <div class="mb-4">
-        {% if product.stock > 0 %}
-          <span class="product-stock-ok">
+        {% if product.stock > 0 or variants %}
+          <span class="product-stock-ok" id="product-stock-display">
             <i class="bi bi-check-circle-fill"></i>
-            Stokta mevcut — {{ product.stock }} adet
+            Stokta mevcut — {% if variants %}{{ variants.0.stock }}{% else %}{{ product.stock }}{% endif %} adet
           </span>
         {% else %}
-          <span class="product-stock-out">
+          <span class="product-stock-out" id="product-stock-display">
             <i class="bi bi-x-circle-fill"></i>
             Stok tükendi
           </span>
@@ -102,8 +207,8 @@
                  id="product-quantity"
                  value="1"
                  min="1"
-                 max="{{ product.stock }}"
-                 {% if product.stock == 0 %}disabled{% endif %}>
+                 max="{% if variants %}{{ variants.0.stock }}{% else %}{{ product.stock }}{% endif %}"
+                 {% if not variants and product.stock == 0 %}disabled{% endif %}>
           <button class="qty-control__btn" type="button" onclick="increaseQty()" aria-label="Artır">
             <i class="bi bi-plus"></i>
           </button>
@@ -111,10 +216,10 @@
 
         <button class="btn-add-to-cart"
                 id="add-to-cart-btn"
-                onclick="addToCart({{ product.id }}, parseInt(document.getElementById('product-quantity').value))"
-                {% if product.stock == 0 %}disabled{% endif %}>
+                onclick="addProductDetailToCart({{ product.id }})"
+                {% if not variants and product.stock == 0 %}disabled{% endif %}>
           <i class="bi bi-cart-plus fs-5"></i>
-          {% if product.stock == 0 %}Stok Tükendi{% else %}Sepete Ekle{% endif %}
+          {% if not variants and product.stock == 0 %}Stok Tükendi{% else %}Sepete Ekle{% endif %}
         </button>
       </div>
 
@@ -142,6 +247,72 @@
   <section class="product-reviews-section">
     <div class="product-reviews-header">
       <div>
+        <h2>Soru-Cevap</h2>
+        <p>{{ questions|length }} soru</p>
+      </div>
+      {% if user.is_authenticated %}
+      <span class="review-login-badge"><i class="bi bi-person-check"></i> Soru sorabilirsiniz</span>
+      {% else %}
+      <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="review-login-badge text-decoration-none">
+        <i class="bi bi-box-arrow-in-right"></i> Giriş yap
+      </a>
+      {% endif %}
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-lg-5">
+        <div class="review-form-panel">
+          <h5 class="fw-bold mb-3">Satıcıya Soru Sor</h5>
+          <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="question">
+            <div class="mb-3">
+              <label class="form-label-custom" for="{{ question_form.question.id_for_label }}">Sorunuz</label>
+              {{ question_form.question }}
+            </div>
+            <button type="submit" class="btn-add-to-cart w-100" {% if not user.is_authenticated %}disabled{% endif %}>
+              <i class="bi bi-send"></i>
+              Soruyu Gönder
+            </button>
+          </form>
+        </div>
+      </div>
+      <div class="col-lg-7">
+        <div class="review-list">
+          {% for question in questions %}
+          <article class="review-item">
+            <div class="review-item__top">
+              <div>
+                <strong>{{ question.user.get_full_name|default:question.user.username }}</strong>
+                <small>{{ question.created_at|date:"d M Y" }}</small>
+              </div>
+              <span><i class="bi bi-question-circle"></i></span>
+            </div>
+            <p class="mb-3">{{ question.question }}</p>
+            {% if question.answer %}
+            <div class="product-answer-box">
+              <strong><i class="bi bi-shop"></i> Satıcı Cevabı</strong>
+              <p>{{ question.answer }}</p>
+            </div>
+            {% else %}
+            <small class="text-muted">Cevap bekleniyor.</small>
+            {% endif %}
+          </article>
+          {% empty %}
+          <div class="review-empty">
+            <i class="bi bi-chat-dots"></i>
+            <strong>Henüz soru yok</strong>
+            <span>Bu ürün hakkında ilk soruyu siz sorabilirsiniz.</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="product-reviews-section">
+    <div class="product-reviews-header">
+      <div>
         <h2>Yorumlar</h2>
         <p>{{ reviews|length }} değerlendirme</p>
       </div>
@@ -160,6 +331,7 @@
           <h5 class="fw-bold mb-3">Ürünü Değerlendir</h5>
           <form method="POST">
             {% csrf_token %}
+            <input type="hidden" name="form_type" value="review">
             <div class="mb-3">
               <label class="form-label-custom" for="{{ review_form.rating.id_for_label }}">Puan</label>
               {{ review_form.rating }}
@@ -214,7 +386,84 @@
 
 {% block extra_js %}
 <script>
-  const maxStock = {{ product.stock }};
+  const galleryStage = document.getElementById('product-gallery-stage');
+  document.querySelectorAll('[data-gallery-trigger]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (!galleryStage) return;
+      const mediaType = button.dataset.mediaType;
+      const mediaSrc = button.dataset.mediaSrc;
+      const mediaAlt = button.dataset.mediaAlt || 'Ürün görseli';
+
+      galleryStage.replaceChildren();
+      if (mediaType === 'video') {
+        const video = document.createElement('video');
+        video.src = mediaSrc;
+        video.className = 'product-detail-video';
+        video.controls = true;
+        video.playsInline = true;
+        video.autoplay = true;
+        galleryStage.appendChild(video);
+      } else {
+        const image = document.createElement('img');
+        image.src = mediaSrc;
+        image.alt = mediaAlt;
+        image.className = 'product-detail-img';
+        const placeholder = document.createElement('div');
+        placeholder.className = 'product-detail-placeholder';
+        placeholder.hidden = true;
+        placeholder.innerHTML = '<i class="bi bi-image"></i>';
+        image.addEventListener('error', () => {
+          image.hidden = true;
+          placeholder.hidden = false;
+        });
+        galleryStage.append(image, placeholder);
+      }
+
+      document.querySelectorAll('[data-gallery-trigger]').forEach((item) => item.classList.remove('is-active'));
+      button.classList.add('is-active');
+    });
+  });
+
+  let maxStock = parseInt(document.getElementById('product-quantity')?.max || '{{ product.stock }}');
+  const moneyFormatter = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' });
+
+  function selectedVariantId() {
+    const selected = document.querySelector('input[name="product_variant"]:checked');
+    return selected ? selected.value : null;
+  }
+
+  function syncVariantState() {
+    const selected = document.querySelector('input[name="product_variant"]:checked');
+    const qtyInput = document.getElementById('product-quantity');
+    const stockDisplay = document.getElementById('product-stock-display');
+    const priceDisplay = document.getElementById('product-price-display');
+    const addButton = document.getElementById('add-to-cart-btn');
+    document.querySelectorAll('.product-variant-option').forEach((label) => {
+      label.classList.toggle('is-active', label.querySelector('input')?.checked);
+    });
+    if (!selected || !qtyInput) return;
+    maxStock = parseInt(selected.dataset.stock || '0');
+    qtyInput.max = maxStock;
+    if (parseInt(qtyInput.value) > maxStock) qtyInput.value = Math.max(maxStock, 1);
+    if (priceDisplay) priceDisplay.textContent = moneyFormatter.format(parseFloat(selected.dataset.price || '0'));
+    if (stockDisplay) {
+      stockDisplay.className = maxStock > 0 ? 'product-stock-ok' : 'product-stock-out';
+      stockDisplay.innerHTML = maxStock > 0
+        ? `<i class="bi bi-check-circle-fill"></i> Stokta mevcut — ${maxStock} adet`
+        : '<i class="bi bi-x-circle-fill"></i> Stok tükendi';
+    }
+    if (addButton) addButton.disabled = maxStock <= 0;
+  }
+
+  document.querySelectorAll('input[name="product_variant"]').forEach((input) => {
+    input.addEventListener('change', syncVariantState);
+  });
+  syncVariantState();
+
+  function addProductDetailToCart(productId) {
+    const qty = parseInt(document.getElementById('product-quantity').value);
+    addToCart(productId, qty, selectedVariantId());
+  }
 
   function decreaseQty() {
     const input = document.getElementById('product-quantity');

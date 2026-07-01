@@ -4,13 +4,31 @@
 <div class="container py-5">
     <div class="card mx-auto bg-white border-0 shadow-sm rounded-4 text-center p-5" style="max-width: 600px;">
         <div class="mb-4">
+            {% if application.status == 'rejected' %}
+            <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle" style="width: 120px; height: 120px;">
+                <i class="bi bi-x-circle" style="font-size: 5rem;"></i>
+            </div>
+            {% elif application.status == 'approved' %}
+            <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success rounded-circle" style="width: 120px; height: 120px;">
+                <i class="bi bi-check-circle" style="font-size: 5rem;"></i>
+            </div>
+            {% else %}
             <div class="d-inline-flex align-items-center justify-content-center bg-warning bg-opacity-10 text-warning rounded-circle" style="width: 120px; height: 120px;">
                 <i class="bi bi-clock-history" style="font-size: 5rem;"></i>
             </div>
+            {% endif %}
         </div>
-        
+
+        {% if application.status == 'rejected' %}
+        <h3 class="fw-bold mb-3">Başvurunuz Reddedildi</h3>
+        <p class="text-muted fs-5 mb-4">Bilgilerinizi güncelleyerek yeni bir satıcı başvurusu oluşturabilirsiniz.</p>
+        {% elif application.status == 'approved' %}
+        <h3 class="fw-bold mb-3">Başvurunuz Onaylandı</h3>
+        <p class="text-muted fs-5 mb-4">Satıcı hesabınız hazırlanıyor. Panel erişimi açıldığında buradan yönlendirileceksiniz.</p>
+        {% else %}
         <h3 class="fw-bold mb-3">Başvurunuz İnceleniyor</h3>
         <p class="text-muted fs-5 mb-4">Satıcı başvurunuz ekibimiz tarafından değerlendirme aşamasındadır. Sonuç en kısa sürede tarafınıza bildirilecektir.</p>
+        {% endif %}
         
         <div class="bg-light rounded-3 p-4 text-start mb-4">
             <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
@@ -27,7 +45,14 @@
             </div>
         </div>
         
-        <a href="{% url 'store:home' %}" class="btn btn-primary rounded-pill px-5 py-2">Ana Sayfaya Dön</a>
+        <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+            {% if application.status == 'rejected' %}
+            <a href="{% url 'vendors:apply' %}" class="btn btn-primary rounded-pill px-5 py-2">Yeni Başvuru Yap</a>
+            {% elif application.status == 'approved' %}
+            <a href="{% url 'vendors:portal' %}" class="btn btn-success rounded-pill px-5 py-2">Satıcı Durumunu Kontrol Et</a>
+            {% endif %}
+            <a href="{% url 'store:home' %}" class="btn btn-outline-secondary rounded-pill px-5 py-2">Ana Sayfaya Dön</a>
+        </div>
     </div>
 </div>
 {% endblock %}

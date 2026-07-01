@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load store_tags %}
+
+{% block content %}
+<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+  <section class="vendor-detail-hero">
+    <div class="vendor-detail-hero__logo">
+      {% if vendor.logo %}
+        <img src="{{ vendor.logo.url }}" alt="{{ vendor.store_name }}">
+      {% else %}
+        <i class="bi bi-shop"></i>
+      {% endif %}
+    </div>
+    <div class="vendor-detail-hero__body">
+      <span class="vendor-detail-hero__badge"><i class="bi bi-patch-check-fill"></i> Onaylı Satıcı</span>
+      <h1>{{ vendor.store_name }}</h1>
+      <p>{{ vendor.description|default:'CoreLogic Store üzerinden satış yapan onaylı mağaza.' }}</p>
+      <div class="vendor-detail-hero__meta">
+        <span><i class="bi bi-box-seam"></i> {{ vendor.product_count }} ürün</span>
+        {% if vendor.phone %}<span><i class="bi bi-telephone"></i> {{ vendor.phone }}</span>{% endif %}
+        <span><i class="bi bi-calendar-check"></i> {{ vendor.created_at|date:"M Y" }} tarihinden beri</span>
+      </div>
+    </div>
+  </section>
+
+  {% include 'store/partials/product_filters.html' %}
+
+  <div class="row g-4">
+    {% for product in products %}
+    <div class="col-lg-3 col-md-4 col-sm-6 fade-in-up" style="animation-delay:{{ forloop.counter0 }}0ms">
+      <div class="product-card">
+        {% if product.discount_price %}<span class="sale-badge">İndirim</span>{% endif %}
+        {% include 'store/partials/product_card_actions.html' with product=product %}
+        <div class="product-card__img">
+          {% if product.image %}
+          <a href="{% url 'store:product_detail' product.slug %}">
+            <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+          </a>
+          {% else %}
+          <a href="{% url 'store:product_detail' product.slug %}" class="product-card__img-placeholder">
+            <i class="bi bi-image"></i>
+          </a>
+          {% endif %}
+          <div class="product-card__overlay">
+            <button class="product-card__quick-add" onclick="addToCart({{ product.id }})">
+              <i class="bi bi-cart-plus"></i> Hızlı Ekle
+            </button>
+          </div>
+        </div>
+        <div class="product-card__body">
+          <div class="product-card__vendor"><i class="bi bi-shop"></i>{{ product.vendor.store_name }}</div>
+          <a href="{% url 'store:product_detail' product.slug %}" class="product-card__name">{{ product.name }}</a>
+          <div class="product-card__price-row">
+            {% if product.discount_price %}
+              <span class="product-card__price product-card__price--sale">{{ product.discount_price|currency }}</span>
+              <span class="product-card__old-price">{{ product.price|currency }}</span>
+            {% else %}
+              <span class="product-card__price">{{ product.price|currency }}</span>
+            {% endif %}
+          </div>
+          <button class="product-card__add-btn" onclick="addToCart({{ product.id }})">
+            <i class="bi bi-cart-plus"></i> Sepete Ekle
+          </button>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+      <div class="empty-state">
+        <i class="bi bi-shop empty-state__icon"></i>
+        <p class="empty-state__title">Bu satıcıda görünür ürün yok.</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

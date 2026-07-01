@@ -1,0 +1,50 @@
+<form method="GET" class="product-filter-panel">
+  {% if query %}
+    <input type="hidden" name="q" value="{{ query }}">
+  {% endif %}
+  <div class="product-filter-panel__header">
+    <strong><i class="bi bi-funnel"></i> Filtrele</strong>
+    <a href="{{ request.path }}{% if query %}?q={{ query|urlencode }}{% endif %}" class="product-filter-panel__reset">Temizle</a>
+  </div>
+  <div class="product-filter-panel__grid">
+    <label>
+      <span>Min Fiyat</span>
+      <input type="number" name="min_price" min="0" step="0.01" value="{{ active_filters.min_price }}" class="form-control" placeholder="0">
+    </label>
+    <label>
+      <span>Max Fiyat</span>
+      <input type="number" name="max_price" min="0" step="0.01" value="{{ active_filters.max_price }}" class="form-control" placeholder="50000">
+    </label>
+    <label>
+      <span>Satıcı</span>
+      <select name="vendor" class="form-select">
+        <option value="">Tüm satıcılar</option>
+        {% for vendor in filter_vendors %}
+        <option value="{{ vendor.id }}" {% if active_filters.vendor|stringformat:"s" == vendor.id|stringformat:"s" %}selected{% endif %}>{{ vendor.store_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Sıralama</span>
+      <select name="sort" class="form-select">
+        <option value="newest" {% if active_filters.sort == 'newest' %}selected{% endif %}>En yeni</option>
+        <option value="price_asc" {% if active_filters.sort == 'price_asc' %}selected{% endif %}>Fiyat artan</option>
+        <option value="price_desc" {% if active_filters.sort == 'price_desc' %}selected{% endif %}>Fiyat azalan</option>
+        <option value="name" {% if active_filters.sort == 'name' %}selected{% endif %}>Ürün adı</option>
+      </select>
+    </label>
+  </div>
+  <div class="product-filter-panel__checks">
+    <label>
+      <input type="checkbox" name="in_stock" value="1" {% if active_filters.in_stock %}checked{% endif %}>
+      <span>Stokta olanlar</span>
+    </label>
+    <label>
+      <input type="checkbox" name="on_sale" value="1" {% if active_filters.on_sale %}checked{% endif %}>
+      <span>İndirimli ürünler</span>
+    </label>
+    <button type="submit" class="btn btn-primary rounded-pill px-4">
+      <i class="bi bi-check2"></i> Uygula
+    </button>
+  </div>
+</form>

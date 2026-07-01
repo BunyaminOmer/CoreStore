@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} | CoreLogic Store{% endblock %}
+
+{% block extra_css %}
+<style>
+  .legal-document {
+    padding: 2rem 2.25rem;
+    line-height: 1.75;
+    color: var(--text-dark, #1f2937);
+  }
+  .legal-document h1 {
+    font-size: 1.85rem;
+    font-weight: 800;
+    margin-bottom: .35rem;
+    color: var(--primary, #0f2942);
+  }
+  .legal-document .legal-meta {
+    color: var(--text-light, #6b7280);
+    font-size: .92rem;
+    margin-bottom: 1.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+  }
+  .legal-document h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-top: 1.75rem;
+    margin-bottom: .65rem;
+    color: var(--primary, #0f2942);
+  }
+  .legal-document h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-top: 1.25rem;
+    margin-bottom: .5rem;
+  }
+  .legal-document p,
+  .legal-document li {
+    font-size: .96rem;
+  }
+  .legal-document ul,
+  .legal-document ol {
+    padding-left: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .legal-document li + li {
+    margin-top: .35rem;
+  }
+  .legal-document a {
+    color: var(--primary-light, #2563a8);
+    text-decoration: none;
+  }
+  .legal-document a:hover {
+    text-decoration: underline;
+  }
+  .legal-nav {
+    margin-top: 1.5rem;
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-lg, 12px);
+    background: rgba(15, 41, 66, .04);
+    border: 1px solid rgba(226, 232, 240, .8);
+  }
+  .legal-nav__title {
+    font-size: .85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-light, #6b7280);
+    margin-bottom: .75rem;
+  }
+  .legal-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1rem;
+  }
+  .legal-nav a {
+    font-size: .92rem;
+    font-weight: 600;
+  }
+  .legal-faq-item + .legal-faq-item {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border, #e5e7eb);
+  }
+  .legal-faq-item h2 {
+    margin-top: 0;
+    font-size: 1.05rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container commerce-page py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-9">
+      <article class="legal-document checkout-card">
+        {% block legal_content %}{% endblock %}
+      </article>
+
+      <nav class="legal-nav" aria-label="Yasal sayfalar">
+        <p class="legal-nav__title">İlgili sayfalar</p>
+        <ul>
+          <li><a href="{% url 'store:faq' %}">Sıkça Sorulan Sorular</a></li>
+          <li><a href="{% url 'store:cancellation_policy' %}">İptal ve İade Koşulları</a></li>
+          <li><a href="{% url 'store:privacy_policy' %}">Gizlilik Politikası</a></li>
+          <li><a href="{% url 'store:distance_sales' %}">Mesafeli Satış Sözleşmesi</a></li>
+          <li><a href="{% url 'store:feedback' %}">Geri Bildirim</a></li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+{% endblock %}

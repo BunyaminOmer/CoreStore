@@ -1,4 +1,5 @@
 from decimal import Decimal, InvalidOperation
+from datetime import timedelta
 from io import BytesIO
 import mimetypes
 from pathlib import Path
@@ -18,14 +19,32 @@ from django.utils import timezone
 from django.utils.text import slugify
 from openpyxl import Workbook, load_workbook
 
-from .models import Vendor, VendorApplication
-from .forms import BulkProductUploadForm, VendorApplicationForm, VendorProductForm
+from .models import (
+    AdPlacementRequest,
+    SponsoredProductCampaign,
+    SupportServiceOrder,
+    SupportServicePackage,
+    Vendor,
+    VendorApplication,
+    VendorSubscription,
+    VendorSubscriptionPlan,
+)
+from .forms import (
+    AdPlacementRequestForm,
+    BulkProductUploadForm,
+    BusinessProfileForm,
+    SponsoredProductCampaignForm,
+    SupportServiceOrderForm,
+    VendorApplicationForm,
+    VendorProductForm,
+)
 from store.models import (
     CargoStation,
     Category,
     Order,
     OrderItem,
     Product,
+    ProductMedia,
     Shipment,
     ShipmentEvent,
     ShippingCompany,
@@ -33,6 +52,17 @@ from store.models import (
 
 def is_approved_vendor(user):
     return user.is_authenticated and user.is_vendor and hasattr(user, 'vendor_profile') and user.vendor_profile.is_approved
+
+
+def require_business_profile(request, vendor):
+    if vendor.has_business_profile:
+        return None
+    messages.warning(request, 'Abonelik, reklam ve hizmet paketlerinden önce işletme profilinizi tamamlayın.')
+    return redirect('vendors:business_profile')
+
+
+def latest_vendor_application(user):
+    return user.vendor_applications.order_by('-created_at').first()
 
 
 def get_corejet_company():
@@ -361,14 +391,33 @@ def process_bulk_product_upload(vendor, uploaded_file, update_existing=False, de
     return result
 
 @login_required
-def vendor_apply_view(request):
-    if request.user.vendor_applications.exists():
-        app = request.user.vendor_applications.first()
-        if app.status == 'pending':
+def vendor_portal_view(request):
+    if is_approved_vendor(request.user):
+        return redirect('vendors:dashboard')
+
+    application = latest_vendor_application(request.user)
+    if application:
+        if application.status == VendorApplication.Status.PENDING:
             return redirect('vendors:pending')
-        elif app.status == 'approved':
-            messages.success(request, 'Zaten onaylı bir satıcısınız.')
+        if application.status == VendorApplication.Status.APPROVED and hasattr(request.user, 'vendor_profile'):
             return redirect('vendors:dashboard')
+
+    return redirect('vendors:apply')
+
+
+@login_required
+def vendor_apply_view(request):
+    if is_approved_vendor(request.user):
+        messages.success(request, 'Zaten onaylı bir satıcısınız.')
+        return redirect('vendors:dashboard')
+
+    app = latest_vendor_application(request.user)
+    if app:
+        if app.status == VendorApplication.Status.PENDING:
+            return redirect('vendors:pending')
+        if app.status == VendorApplication.Status.APPROVED:
+            messages.info(request, 'Başvurunuz onaylandı. Satıcı paneliniz hazırlanıyor.')
+            return redirect('vendors:pending')
             
     if request.method == 'POST':
         form = VendorApplicationForm(request.POST)
@@ -376,6 +425,7 @@ def vendor_apply_view(request):
             application = form.save(commit=False)
             application.user = request.user
             application.save()
+            messages.success(request, 'Satıcı başvurunuz alındı.')
             return redirect('vendors:pending')
     else:
         form = VendorApplicationForm()
@@ -384,18 +434,22 @@ def vendor_apply_view(request):
 
 @login_required
 def vendor_pending_view(request):
-    if not request.user.vendor_applications.exists():
+    if is_approved_vendor(request.user):
+        return redirect('vendors:dashboard')
+
+    app = latest_vendor_application(request.user)
+    if not app:
         return redirect('vendors:apply')
-    app = request.user.vendor_applications.first()
     return render(request, 'vendors/pending.html', {'application': app})
 
-@user_passes_test(is_approved_vendor, login_url='/accounts/login/')
+@user_passes_test(is_approved_vendor, login_url='/vendor/')
 def vendor_dashboard_view(request):
     from django.db.models import F
     import json
-    from datetime import timedelta
     
     vendor = request.user.vendor_profile
+    active_subscription = vendor.active_subscription
+    business_profile = getattr(vendor, 'business_profile', None)
     
     # Stats
     product_count = vendor.products.count()
@@ -431,6 +485,13 @@ def vendor_dashboard_view(request):
     
     context = {
         'vendor': vendor,
+        'business_profile': business_profile,
+        'active_subscription': active_subscription,
+        'pending_subscription_count': vendor.subscriptions.filter(status=VendorSubscription.Status.PENDING).count(),
+        'pending_campaign_count': vendor.sponsored_campaigns.filter(status=SponsoredProductCampaign.Status.PENDING).count(),
+        'active_campaign_count': vendor.sponsored_campaigns.filter(status=SponsoredProductCampaign.Status.ACTIVE).count(),
+        'pending_ad_count': vendor.ad_requests.filter(status=AdPlacementRequest.Status.PENDING).count(),
+        'open_service_count': vendor.service_orders.exclude(status=SupportServiceOrder.Status.COMPLETED).count(),
         'product_count': product_count,
         'active_orders_count': active_orders_count,
         'total_sales': total_sales,
@@ -441,13 +502,190 @@ def vendor_dashboard_view(request):
     }
     return render(request, 'vendors/dashboard.html', context)
 
-@user_passes_test(is_approved_vendor)
+
+@user_passes_test(is_approved_vendor, login_url='/vendor/')
+def vendor_business_profile_view(request):
+    vendor = request.user.vendor_profile
+    profile = getattr(vendor, 'business_profile', None)
+
+    if request.method == 'POST':
+        form = BusinessProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            profile = form.save(commit=False)
+            profile.vendor = vendor
+            profile.save()
+            messages.success(request, 'İşletme profiliniz kaydedildi. Artık paket ve reklam araçlarını kullanabilirsiniz.')
+            return redirect('vendors:subscriptions')
+    else:
+        initial = {
+            'legal_name': vendor.store_name,
+            'tax_number': vendor.tax_number,
+            'phone': vendor.phone,
+            'billing_email': request.user.email,
+        }
+        form = BusinessProfileForm(instance=profile, initial=initial)
+
+    return render(request, 'vendors/business_profile.html', {
+        'vendor': vendor,
+        'profile': profile,
+        'form': form,
+    })
+
+
+@user_passes_test(is_approved_vendor, login_url='/vendor/')
+def vendor_subscription_view(request):
+    vendor = request.user.vendor_profile
+    redirect_response = require_business_profile(request, vendor)
+    if redirect_response:
+        return redirect_response
+
+    plans = VendorSubscriptionPlan.objects.filter(is_active=True).order_by('display_order', 'monthly_price')
+    active_subscription = vendor.active_subscription
+    subscriptions = vendor.subscriptions.select_related('plan')[:8]
+
+    if request.method == 'POST':
+        plan = get_object_or_404(plans, id=request.POST.get('plan_id'))
+        starts_at = timezone.now()
+        status = VendorSubscription.Status.ACTIVE if plan.monthly_price == 0 else VendorSubscription.Status.PENDING
+        subscription = VendorSubscription.objects.create(
+            vendor=vendor,
+            plan=plan,
+            status=status,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(days=30),
+            payment_note='Demo mod: ödeme entegrasyonu bağlanınca tahsilat adımı eklenecek.',
+        )
+        if status == VendorSubscription.Status.ACTIVE:
+            vendor.subscriptions.exclude(id=subscription.id).filter(
+                status=VendorSubscription.Status.ACTIVE,
+            ).update(status=VendorSubscription.Status.CANCELLED)
+            vendor.product_limit = plan.product_limit
+            vendor.save(update_fields=['product_limit', 'updated_at'])
+            messages.success(request, f'{plan.name} paketi aktif edildi.')
+        else:
+            messages.success(request, f'{plan.name} paketi için talebiniz alındı. Yönetici onayından sonra aktifleşecek.')
+        return redirect('vendors:subscriptions')
+
+    return render(request, 'vendors/subscriptions.html', {
+        'vendor': vendor,
+        'plans': plans,
+        'active_subscription': active_subscription,
+        'subscriptions': subscriptions,
+    })
+
+
+@user_passes_test(is_approved_vendor, login_url='/vendor/')
+def vendor_sponsorships_view(request):
+    vendor = request.user.vendor_profile
+    redirect_response = require_business_profile(request, vendor)
+    if redirect_response:
+        return redirect_response
+    active_subscription = vendor.active_subscription
+
+    if not active_subscription:
+        messages.warning(request, 'Sponsorlu ürün talebi oluşturmak için önce aktif bir satıcı paketi seçin.')
+        return redirect('vendors:subscriptions')
+
+    if request.method == 'POST':
+        form = SponsoredProductCampaignForm(request.POST, vendor=vendor)
+        if form.is_valid():
+            used_quota = vendor.sponsored_campaigns.filter(
+                status__in=[
+                    SponsoredProductCampaign.Status.PENDING,
+                    SponsoredProductCampaign.Status.ACTIVE,
+                ],
+                starts_at__gte=active_subscription.starts_at,
+            ).count()
+            if used_quota >= active_subscription.plan.sponsored_product_quota:
+                messages.error(request, 'Bu paketteki sponsorlu ürün hakkınız doldu. Paketinizi yükseltebilir veya mevcut taleplerin bitmesini bekleyebilirsiniz.')
+                return redirect('vendors:sponsorships')
+            campaign = form.save(commit=False)
+            campaign.vendor = vendor
+            campaign.status = SponsoredProductCampaign.Status.PENDING
+            campaign.save()
+            messages.success(request, 'Sponsorlu ürün talebiniz alındı. Onaylandığında ilgili vitrinde gösterilecek.')
+            return redirect('vendors:sponsorships')
+    else:
+        form = SponsoredProductCampaignForm(vendor=vendor)
+
+    campaigns = vendor.sponsored_campaigns.select_related('product').order_by('-created_at')
+    return render(request, 'vendors/sponsorships.html', {
+        'vendor': vendor,
+        'form': form,
+        'campaigns': campaigns,
+        'active_subscription': active_subscription,
+    })
+
+
+@user_passes_test(is_approved_vendor, login_url='/vendor/')
+def vendor_ads_view(request):
+    vendor = request.user.vendor_profile
+    redirect_response = require_business_profile(request, vendor)
+    if redirect_response:
+        return redirect_response
+    active_subscription = vendor.active_subscription
+
+    if not active_subscription:
+        messages.warning(request, 'Reklam alanı talebi oluşturmak için önce aktif bir satıcı paketi seçin.')
+        return redirect('vendors:subscriptions')
+
+    if request.method == 'POST':
+        form = AdPlacementRequestForm(request.POST, request.FILES)
+        if form.is_valid():
+            ad_request = form.save(commit=False)
+            ad_request.vendor = vendor
+            ad_request.status = AdPlacementRequest.Status.PENDING
+            ad_request.save()
+            messages.success(request, 'Reklam alanı talebiniz alındı. Yönetici fiyat ve yayın durumunu panelden netleştirecek.')
+            return redirect('vendors:ads')
+    else:
+        form = AdPlacementRequestForm()
+
+    ad_requests = vendor.ad_requests.order_by('-created_at')
+    return render(request, 'vendors/ads.html', {
+        'vendor': vendor,
+        'form': form,
+        'ad_requests': ad_requests,
+        'active_subscription': active_subscription,
+    })
+
+
+@user_passes_test(is_approved_vendor, login_url='/vendor/')
+def vendor_services_view(request):
+    vendor = request.user.vendor_profile
+    redirect_response = require_business_profile(request, vendor)
+    if redirect_response:
+        return redirect_response
+
+    packages = SupportServicePackage.objects.filter(is_active=True).order_by('display_order', 'price')
+    if request.method == 'POST':
+        package = get_object_or_404(packages, id=request.POST.get('package_id'))
+        form = SupportServiceOrderForm(request.POST)
+        if form.is_valid():
+            order = form.save(commit=False)
+            order.vendor = vendor
+            order.package = package
+            order.save()
+            messages.success(request, f'{package.name} talebiniz alındı. Destek ekibi sizinle iletişime geçecek.')
+            return redirect('vendors:services')
+    else:
+        form = SupportServiceOrderForm()
+
+    service_orders = vendor.service_orders.select_related('package').order_by('-created_at')
+    return render(request, 'vendors/services.html', {
+        'vendor': vendor,
+        'packages': packages,
+        'form': form,
+        'service_orders': service_orders,
+    })
+
+@user_passes_test(is_approved_vendor, login_url='/vendor/')
 def vendor_product_list_view(request):
     vendor = request.user.vendor_profile
     products = vendor.products.all().order_by('-created_at')
     return render(request, 'vendors/product_list.html', {'products': products, 'vendor': vendor})
 
-@user_passes_test(is_approved_vendor)
+@user_passes_test(is_approved_vendor, login_url='/vendor/')
 def vendor_product_add_view(request):
     vendor = request.user.vendor_profile
     if not vendor.can_add_product:
@@ -460,6 +698,8 @@ def vendor_product_add_view(request):
             product = form.save(commit=False)
             product.vendor = vendor
             product.save()
+            form.save_media(product)
+            form.save_variants(product)
             messages.success(request, 'Ürün başarıyla eklendi.')
             return redirect('vendors:product_list')
     else:
@@ -467,15 +707,20 @@ def vendor_product_add_view(request):
         
     return render(request, 'vendors/product_form.html', {'form': form, 'title': 'Yeni Ürün Ekle'})
 
-@user_passes_test(is_approved_vendor)
+@user_passes_test(is_approved_vendor, login_url='/vendor/')
 def vendor_product_edit_view(request, pk):
     vendor = request.user.vendor_profile
-    product = get_object_or_404(Product, pk=pk, vendor=vendor)
+    product = get_object_or_404(Product.objects.prefetch_related('media'), pk=pk, vendor=vendor)
     
     if request.method == 'POST':
         form = VendorProductForm(request.POST, request.FILES, instance=product, vendor=vendor)
         if form.is_valid():
-            form.save()
+            product = form.save()
+            delete_ids = request.POST.getlist('delete_media')
+            if delete_ids:
+                ProductMedia.objects.filter(product=product, id__in=delete_ids).delete()
+            form.save_media(product)
+            form.save_variants(product)
             messages.success(request, 'Ürün güncellendi.')
             return redirect('vendors:product_list')
     else:
@@ -483,7 +728,7 @@ def vendor_product_edit_view(request, pk):
         
     return render(request, 'vendors/product_form.html', {'form': form, 'title': 'Ürün Düzenle', 'product': product})
 
-@user_passes_test(is_approved_vendor)
+@user_passes_test(is_approved_vendor, login_url='/vendor/')
 def vendor_product_delete_view(request, pk):
     vendor = request.user.vendor_profile
     product = get_object_or_404(Product, pk=pk, vendor=vendor)
@@ -492,7 +737,7 @@ def vendor_product_delete_view(request, pk):
         messages.success(request, 'Ürün silindi.')
     return redirect('vendors:product_list')
 
-@user_passes_test(is_approved_vendor)
+@user_passes_test(is_approved_vendor, login_url='/vendor/')
 def vendor_orders_view(request):
     vendor = request.user.vendor_profile
     status_filter = request.GET.get('status')
@@ -582,7 +827,7 @@ def vendor_orders_view(request):
         'shipment_status_choices': Shipment.Status.choices,
     })
 
-@user_passes_test(is_approved_vendor)
+@user_passes_test(is_approved_vendor, login_url='/vendor/')
 def vendor_bulk_upload_view(request):
     vendor = request.user.vendor_profile
     result = None
@@ -616,7 +861,7 @@ def vendor_bulk_upload_view(request):
     })
 
 
-@user_passes_test(is_approved_vendor)
+@user_passes_test(is_approved_vendor, login_url='/vendor/')
 def vendor_bulk_upload_template_view(request):
     workbook = Workbook()
     sheet = workbook.active

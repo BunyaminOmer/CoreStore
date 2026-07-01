@@ -1,0 +1,24 @@
+{% if order.shipment %}
+<div class="shipment-timeline">
+  {% for event in order.shipment.events.all %}
+  <div class="shipment-timeline__item">
+    <span class="shipment-timeline__dot"></span>
+    <div>
+      <strong>{{ event.get_status_display }}</strong>
+      <small>{{ event.happened_at|date:"d.m.Y H:i" }}</small>
+      {% if event.station %}<p>{{ event.station.name }}</p>{% endif %}
+      {% if event.description %}<p>{{ event.description }}</p>{% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="shipment-timeline__item">
+    <span class="shipment-timeline__dot"></span>
+    <div>
+      <strong>{{ order.shipment.get_status_display }}</strong>
+      <small>{{ order.shipment.updated_at|date:"d.m.Y H:i" }}</small>
+      <p>Kargo kaydı oluşturuldu.</p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

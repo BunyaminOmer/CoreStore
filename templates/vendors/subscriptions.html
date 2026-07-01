@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load store_tags %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+        <div>
+            <span class="badge bg-info-subtle text-info rounded-pill px-3 py-2 mb-2">Büyüme Araçları</span>
+            <h1 class="fw-bold mb-1">Satıcı Abonelik Paketleri</h1>
+            <p class="text-muted mb-0">Ürün limiti, sponsorlu ürün hakkı, reklam kredisi ve destek seviyenizi seçin.</p>
+        </div>
+        <a href="{% url 'vendors:dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-arrow-left me-2"></i>Panele Dön
+        </a>
+    </div>
+
+    {% if active_subscription %}
+    <div class="alert alert-success border-0 rounded-4 shadow-sm mb-4">
+        <strong>{{ active_subscription.plan.name }}</strong> paketi aktif. Bitiş: {{ active_subscription.ends_at|date:"d M Y H:i" }}.
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        {% for plan in plans %}
+        <div class="col-lg-3 col-md-6">
+            <div class="bg-white rounded-4 shadow-sm border {% if plan.is_featured %}border-primary{% else %}border-custom{% endif %} p-4 h-100 position-relative">
+                {% if plan.is_featured %}
+                    <span class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-primary px-3 py-2">Önerilen</span>
+                {% endif %}
+                <h5 class="fw-bold mb-2">{{ plan.name }}</h5>
+                <p class="small text-muted" style="min-height: 48px;">{{ plan.description }}</p>
+                <div class="display-6 fw-bold mb-3">{{ plan.monthly_price|currency }}</div>
+                <ul class="list-unstyled small text-muted d-grid gap-2 mb-4">
+                    <li><i class="bi bi-box-seam text-primary me-2"></i>{{ plan.product_limit }} ürün limiti</li>
+                    <li><i class="bi bi-megaphone text-warning me-2"></i>{{ plan.sponsored_product_quota }} sponsorlu ürün hakkı</li>
+                    <li><i class="bi bi-badge-ad text-danger me-2"></i>{{ plan.ad_credit }} reklam kredisi</li>
+                    <li><i class="bi bi-headset text-success me-2"></i>{{ plan.support_level }}</li>
+                </ul>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                    <button type="submit" class="btn {% if plan.is_featured %}btn-primary{% else %}btn-outline-primary{% endif %} w-100 rounded-pill">
+                        Paketi Seç
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="bg-white rounded-4 shadow-sm border border-custom p-5 text-center text-muted">Henüz aktif abonelik paketi bulunmuyor.</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="bg-white rounded-4 shadow-sm border border-custom p-4 mt-5">
+        <h5 class="fw-bold mb-3">Son Paket Hareketleri</h5>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Paket</th><th>Durum</th><th>Başlangıç</th><th>Bitiş</th></tr>
+                </thead>
+                <tbody>
+                    {% for subscription in subscriptions %}
+                    <tr>
+                        <td class="fw-semibold">{{ subscription.plan.name }}</td>
+                        <td><span class="badge bg-light text-dark">{{ subscription.get_status_display }}</span></td>
+                        <td>{{ subscription.starts_at|date:"d M Y" }}</td>
+                        <td>{{ subscription.ends_at|date:"d M Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center text-muted py-4">Henüz paket hareketi yok.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

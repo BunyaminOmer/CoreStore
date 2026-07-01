@@ -58,13 +58,16 @@
             {% else %}
             <p class="text-muted mb-0">Kargo kaydı hazırlanıyor.</p>
             {% endif %}
+            {% include 'store/partials/shipment_timeline.html' %}
         </div>
 
         <div class="border rounded-3 p-4">
             <h5 class="fw-bold mb-3"><i class="bi bi-box-seam me-2 text-primary"></i>Ürünler</h5>
             {% for item in order.items.all %}
             <div class="d-flex justify-content-between border-bottom py-2">
-                <span>{{ item.product_name }} x{{ item.quantity }}</span>
+                <span>
+                    {{ item.product_name }}{% if item.variant_name %} · {{ item.variant_name }}{% endif %} x{{ item.quantity }}
+                </span>
                 <strong>{{ item.line_total|currency }}</strong>
             </div>
             {% endfor %}

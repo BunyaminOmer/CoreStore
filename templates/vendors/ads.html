@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load store_tags %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+        <div>
+            <span class="badge bg-danger-subtle text-danger rounded-pill px-3 py-2 mb-2">Reklam Alanları</span>
+            <h1 class="fw-bold mb-1">Reklam Panosu Talepleri</h1>
+            <p class="text-muted mb-0">Ana sayfa ve listeleme alanlarında yayınlanacak banner taleplerinizi yönetin.</p>
+        </div>
+        <a href="{% url 'vendors:dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-arrow-left me-2"></i>Panele Dön
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="bg-white rounded-4 shadow-sm border border-custom p-4">
+                <h5 class="fw-bold mb-3">Yeni Reklam Talebi</h5>
+                <div class="alert alert-light border rounded-4 small mb-3">
+                    Aktif paket: <strong>{{ active_subscription.plan.name }}</strong> · Reklam kredisi:
+                    <strong>{{ active_subscription.plan.ad_credit }}</strong>
+                </div>
+                <form method="post" enctype="multipart/form-data" class="d-grid gap-3">
+                    {% csrf_token %}
+                    {% for field in form %}
+                        <div>
+                            <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary rounded-pill">
+                        <i class="bi bi-send me-2"></i>Talep Gönder
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="bg-white rounded-4 shadow-sm border border-custom p-4">
+                <h5 class="fw-bold mb-3">Reklam Taleplerim</h5>
+                <div class="d-grid gap-3">
+                    {% for ad in ad_requests %}
+                    <div class="border rounded-4 p-3 d-flex gap-3 align-items-center">
+                        {% if ad.image %}
+                            <img src="{{ ad.image.url }}" class="rounded-3" style="width: 96px; height: 64px; object-fit: cover;" alt="{{ ad.title }}">
+                        {% else %}
+                            <div class="bg-light rounded-3 d-flex align-items-center justify-content-center" style="width: 96px; height: 64px;"><i class="bi bi-image text-muted fs-3"></i></div>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">{{ ad.title }}</div>
+                            <div class="small text-muted">{{ ad.get_placement_display }} · {{ ad.starts_at|date:"d M" }} - {{ ad.ends_at|date:"d M" }}</div>
+                        </div>
+                        <span class="badge bg-light text-dark">{{ ad.get_status_display }}</span>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-5">Henüz reklam talebiniz yok.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
