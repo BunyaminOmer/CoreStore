@@ -4,7 +4,7 @@ from django.core.cache import cache
 from django.http import HttpRequest
 from django.db.models import Sum
 
-from store.models import Cart, Category
+from store.models import Cart, Category, Notification
 
 
 CATEGORIES_CACHE_KEY = 'navigation:root-categories:v1'
@@ -70,3 +70,13 @@ def categories_context(request: HttpRequest) -> dict:
     return {
         'categories': categories,
     }
+
+
+def notifications_context(request: HttpRequest) -> dict:
+    if not getattr(request, 'user', None) or not request.user.is_authenticated:
+        return {'unread_notification_count': 0}
+    try:
+        count = Notification.objects.filter(recipient=request.user, read_at__isnull=True).count()
+    except Exception:
+        count = 0
+    return {'unread_notification_count': count}

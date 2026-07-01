@@ -1,5 +1,14 @@
 from django import forms
-from .models import CustomerAddress, Order, OrderServiceRequest, ProductQuestion, ProductReview, SiteFeedback
+from .models import (
+    CustomerAddress,
+    Order,
+    OrderServiceRequest,
+    ProductQuestion,
+    ProductReview,
+    SiteFeedback,
+    SupportTicket,
+    SupportTicketMessage,
+)
 
 
 class CheckoutForm(forms.Form):
@@ -200,6 +209,50 @@ class OrderServiceRequestForm(forms.ModelForm):
                 'class': 'form-control',
                 'rows': 3,
                 'placeholder': 'Talebinizle ilgili kısa bir açıklama yazın.',
+            }),
+        }
+
+
+class SupportTicketForm(forms.ModelForm):
+    first_message = forms.CharField(
+        label='Mesajınız',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 4,
+            'placeholder': 'Sorunu, beklentinizi ve varsa ürün/kargo detayını yazın.',
+        }),
+    )
+
+    class Meta:
+        model = SupportTicket
+        fields = ['ticket_type', 'order', 'subject', 'first_message']
+        widgets = {
+            'ticket_type': forms.Select(attrs={'class': 'form-select'}),
+            'order': forms.Select(attrs={'class': 'form-select'}),
+            'subject': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Örn: Ürün hasarlı geldi, kargo gecikti, fatura bilgisi',
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        self.fields['order'].required = False
+        self.fields['order'].empty_label = 'Sipariş seçmeden genel destek talebi'
+        if user is not None:
+            self.fields['order'].queryset = user.orders.order_by('-created_at')
+
+
+class SupportTicketMessageForm(forms.ModelForm):
+    class Meta:
+        model = SupportTicketMessage
+        fields = ['message']
+        widgets = {
+            'message': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Yanıtınızı yazın...',
             }),
         }
 

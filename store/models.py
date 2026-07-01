@@ -860,6 +860,169 @@ class OrderServiceRequest(models.Model):
         return f'Sipariş #{self.order_id} - {self.get_request_type_display()}'
 
 
+class Notification(models.Model):
+    """In-app notification shown in the customer/seller notification center."""
+
+    class NotificationType(models.TextChoices):
+        ORDER = 'order', 'Sipariş'
+        SHIPPING = 'shipping', 'Kargo'
+        SUPPORT = 'support', 'Destek'
+        QUESTION = 'question', 'Soru-Cevap'
+        REVIEW = 'review', 'Yorum'
+        SYSTEM = 'system', 'Sistem'
+
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        verbose_name='Alıcı',
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sent_notifications',
+        verbose_name='İşlemi Yapan',
+    )
+    notification_type = models.CharField(
+        max_length=20,
+        choices=NotificationType.choices,
+        default=NotificationType.SYSTEM,
+        verbose_name='Bildirim Tipi',
+    )
+    title = models.CharField(max_length=160, verbose_name='Başlık')
+    message = models.TextField(blank=True, verbose_name='Mesaj')
+    link_url = models.CharField(max_length=320, blank=True, verbose_name='Bağlantı')
+    read_at = models.DateTimeField(blank=True, null=True, verbose_name='Okunma Zamanı')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Oluşturulma Zamanı')
+
+    class Meta:
+        verbose_name = 'Bildirim'
+        verbose_name_plural = 'Bildirimler'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', 'read_at', '-created_at']),
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.recipient} - {self.title}'
+
+    @property
+    def is_read(self) -> bool:
+        return self.read_at is not None
+
+    def mark_read(self):
+        if not self.read_at:
+            self.read_at = timezone.now()
+            self.save(update_fields=['read_at'])
+
+
+class SupportTicket(models.Model):
+    """Customer support/return ticket with chat and AI-assisted guidance."""
+
+    class TicketType(models.TextChoices):
+        GENERAL = 'general', 'Genel Destek'
+        RETURN = 'return', 'İade'
+        CANCEL = 'cancel', 'İptal'
+        SHIPPING = 'shipping', 'Kargo'
+        BILLING = 'billing', 'Fatura/Ödeme'
+        DAMAGED = 'damaged', 'Hasarlı Ürün'
+
+    class Status(models.TextChoices):
+        OPEN = 'open', 'Açık'
+        WAITING_CUSTOMER = 'waiting_customer', 'Müşteri Yanıtı Bekleniyor'
+        WAITING_SUPPORT = 'waiting_support', 'Destek Yanıtı Bekleniyor'
+        RESOLVED = 'resolved', 'Çözüldü'
+        CLOSED = 'closed', 'Kapatıldı'
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='support_tickets',
+        verbose_name='Müşteri',
+    )
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='support_tickets',
+        verbose_name='Sipariş',
+    )
+    service_request = models.OneToOneField(
+        OrderServiceRequest,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='support_ticket',
+        verbose_name='İade/İptal Talebi',
+    )
+    ticket_type = models.CharField(
+        max_length=20,
+        choices=TicketType.choices,
+        default=TicketType.GENERAL,
+        verbose_name='Talep Tipi',
+    )
+    subject = models.CharField(max_length=180, verbose_name='Konu')
+    status = models.CharField(
+        max_length=24,
+        choices=Status.choices,
+        default=Status.OPEN,
+        verbose_name='Durum',
+    )
+    ai_summary = models.TextField(blank=True, verbose_name='AI Özet')
+    ai_suggestion = models.TextField(blank=True, verbose_name='AI Önerisi')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Oluşturulma Zamanı')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Güncellenme Zamanı')
+
+    class Meta:
+        verbose_name = 'Destek Talebi'
+        verbose_name_plural = 'Destek Talepleri'
+        ordering = ['-updated_at']
+
+    def __str__(self) -> str:
+        return f'#{self.id} - {self.subject}'
+
+
+class SupportTicketMessage(models.Model):
+    """Message inside a support ticket conversation."""
+
+    class SenderType(models.TextChoices):
+        CUSTOMER = 'customer', 'Müşteri'
+        SUPPORT = 'support', 'Destek'
+        VENDOR = 'vendor', 'Satıcı'
+        AI = 'ai', 'AI Destek'
+        SYSTEM = 'system', 'Sistem'
+
+    ticket = models.ForeignKey(
+        SupportTicket,
+        on_delete=models.CASCADE,
+        related_name='messages',
+        verbose_name='Destek Talebi',
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='support_messages',
+        verbose_name='Yazan',
+    )
+    sender_type = models.CharField(max_length=16, choices=SenderType.choices, verbose_name='Gönderen Tipi')
+    message = models.TextField(verbose_name='Mesaj')
+    is_internal = models.BooleanField(default=False, verbose_name='İç Not')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Oluşturulma Zamanı')
+
+    class Meta:
+        verbose_name = 'Destek Mesajı'
+        verbose_name_plural = 'Destek Mesajları'
+        ordering = ['created_at']
+
+    def __str__(self) -> str:
+        return f'{self.ticket_id} - {self.get_sender_type_display()}'
+
+
 class ShippingCompany(models.Model):
     """Shipping company used for order tracking."""
 

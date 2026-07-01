@@ -1,5 +1,8 @@
+import json
 from decimal import Decimal
+from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import TestCase, override_settings
@@ -16,6 +19,7 @@ from store.models import (
     CustomerAddress,
     FavoriteProduct,
     InstallmentRate,
+    Notification,
     Order,
     OrderPhoneNotification,
     OrderServiceRequest,
@@ -24,8 +28,48 @@ from store.models import (
     Shipment,
     ShippingCompany,
     SiteFeedback,
+    SupportTicket,
+    SupportTicketMessage,
 )
 from vendors.models import Vendor
+
+
+class GeminiSupportIntegrationTests(TestCase):
+    @override_settings(
+        GEMINI_API_KEY='test-key',
+        GEMINI_SUPPORT_MODEL='gemini-test-model',
+        GEMINI_INTERACTIONS_URL='https://example.test/interactions',
+    )
+    @patch('store.ai_support.urllib.request.urlopen')
+    def test_gemini_support_reply_builds_request_and_extracts_output(self, mock_urlopen):
+        from store.ai_support import generate_gemini_support_reply
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self):
+                return json.dumps({'output_text': 'Gemini yanıtı hazır.'}).encode('utf-8')
+
+        mock_urlopen.return_value = FakeResponse()
+
+        reply = generate_gemini_support_reply(
+            ticket_type='shipping',
+            subject='Kargo gecikti',
+            message='Kargom nerede kaldı?',
+        )
+
+        request = mock_urlopen.call_args.args[0]
+        body = json.loads(request.data.decode('utf-8'))
+        self.assertEqual(reply, 'Gemini yanıtı hazır.')
+        self.assertEqual(request.full_url, settings.GEMINI_INTERACTIONS_URL)
+        self.assertEqual(request.headers['X-goog-api-key'], 'test-key')
+        self.assertEqual(body['model'], 'gemini-test-model')
+        self.assertIn('CoreLogic Store', body['system_instruction'])
+        self.assertIn('Kargom nerede kaldı?', body['input'])
 
 
 @override_settings(
@@ -106,6 +150,95 @@ class ShipmentTrackingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'CoreJet Kargo Takibi')
         self.assertContains(response, 'CJTEST123')
+
+
+class NotificationAndSupportCenterTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.user = user_model.objects.create_user(
+            username='support-user',
+            email='support@example.com',
+            password='testpass123',
+        )
+        self.order = Order.objects.create(
+            user=self.user,
+            total_amount='250.00',
+            shipping_address='Test adres',
+            phone='05550000000',
+        )
+        self.client.login(username='support-user', password='testpass123')
+
+    def test_support_ticket_creates_ai_message_and_notification(self):
+        response = self.client.post(reverse('store:support_center'), {
+            'ticket_type': SupportTicket.TicketType.DAMAGED,
+            'order': self.order.id,
+            'subject': 'Ürün hasarlı geldi',
+            'first_message': 'Paket kırık geldi ve ürün çalışmıyor.',
+        })
+
+        ticket = SupportTicket.objects.get(user=self.user)
+        self.assertRedirects(response, reverse('store:support_ticket_detail', args=[ticket.id]))
+        self.assertEqual(ticket.order, self.order)
+        self.assertIn('Hasarlı', ticket.ai_suggestion)
+        self.assertEqual(ticket.messages.filter(sender_type=SupportTicketMessage.SenderType.AI).count(), 1)
+        self.assertTrue(Notification.objects.filter(recipient=self.user, notification_type=Notification.NotificationType.SUPPORT).exists())
+
+    @override_settings(GEMINI_API_KEY='test-key', OPENAI_API_KEY='')
+    @patch('store.views.generate_external_support_reply')
+    def test_support_ticket_uses_external_llm_reply_when_available(self, mock_reply):
+        mock_reply.return_value = ('Gemini tarafından oluşturulan gerçek destek yanıtı.', 'Gemini API')
+
+        response = self.client.post(reverse('store:support_center'), {
+            'ticket_type': SupportTicket.TicketType.SHIPPING,
+            'order': self.order.id,
+            'subject': 'Kargo gecikti',
+            'first_message': 'Kargom nerede kaldı?',
+        })
+
+        ticket = SupportTicket.objects.get(subject='Kargo gecikti')
+        self.assertRedirects(response, reverse('store:support_ticket_detail', args=[ticket.id]))
+        self.assertTrue(mock_reply.called)
+        self.assertTrue(ticket.messages.filter(
+            sender_type=SupportTicketMessage.SenderType.AI,
+            message='Gemini tarafından oluşturulan gerçek destek yanıtı.',
+        ).exists())
+        self.assertTrue(ticket.messages.filter(
+            sender_type=SupportTicketMessage.SenderType.SYSTEM,
+            message__contains='Gemini API',
+            is_internal=True,
+        ).exists())
+
+    def test_ticket_chat_adds_customer_message_and_ai_reply(self):
+        ticket = SupportTicket.objects.create(
+            user=self.user,
+            order=self.order,
+            ticket_type=SupportTicket.TicketType.SHIPPING,
+            subject='Kargo gecikti',
+            ai_summary='Kargo gecikti',
+            ai_suggestion='Kargo takip numarası kontrol edilir.',
+        )
+
+        response = self.client.post(reverse('store:support_ticket_detail', args=[ticket.id]), {
+            'message': 'Takip numarası güncellenmiyor.',
+        })
+
+        self.assertRedirects(response, reverse('store:support_ticket_detail', args=[ticket.id]))
+        self.assertEqual(ticket.messages.filter(sender_type=SupportTicketMessage.SenderType.CUSTOMER).count(), 1)
+        self.assertEqual(ticket.messages.filter(sender_type=SupportTicketMessage.SenderType.AI).count(), 1)
+
+    def test_mark_notification_read_redirects_to_link(self):
+        notification = Notification.objects.create(
+            recipient=self.user,
+            title='Test bildirimi',
+            message='Deneme',
+            link_url=reverse('store:support_center'),
+        )
+
+        response = self.client.post(reverse('store:mark_notification_read', args=[notification.id]))
+
+        self.assertRedirects(response, reverse('store:support_center'))
+        notification.refresh_from_db()
+        self.assertTrue(notification.is_read)
 
 
 class CheckoutAddressBillingTests(TestCase):

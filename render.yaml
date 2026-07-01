@@ -34,3 +34,11 @@ services:
         sync: false
       - key: REQUIRE_CLOUDINARY
         value: "False"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_SUPPORT_MODEL
+        value: "gemini-3.5-flash"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_SUPPORT_MODEL
+        value: "gpt-4.1-mini"

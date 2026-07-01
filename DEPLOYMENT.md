@@ -17,6 +17,10 @@ Bu proje Django tabanli oldugu icin GoDaddy bu planda domain/DNS tarafinda kulla
    - `CLOUDINARY_CLOUD_NAME`
    - `CLOUDINARY_API_KEY`
    - `CLOUDINARY_API_SECRET`
+   - `GEMINI_API_KEY` (AI destek sohbetinde gerçek LLM yanıtı için ana sağlayıcı)
+   - `GEMINI_SUPPORT_MODEL` (opsiyonel, varsayılan: `gemini-3.5-flash`)
+   - `OPENAI_API_KEY` (opsiyonel yedek AI sağlayıcı)
+   - `OPENAI_SUPPORT_MODEL` (opsiyonel, varsayılan: `gpt-4.1-mini`)
 4. Render deploy tamamlandiginda verilen `*.onrender.com` adresinden siteyi kontrol et.
 
 ## 3. GoDaddy DNS

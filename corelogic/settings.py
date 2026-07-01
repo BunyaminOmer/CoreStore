@@ -34,6 +34,16 @@ def env_int(name: str, default: int = 0) -> int:
         raise ImproperlyConfigured(f'{name} must be an integer.') from exc
 
 
+def env_float(name: str, default: float = 0) -> float:
+    value = os.environ.get(name)
+    if value is None or value.strip() == '':
+        return default
+    try:
+        return float(value)
+    except ValueError as exc:
+        raise ImproperlyConfigured(f'{name} must be a number.') from exc
+
+
 def env_list(name: str) -> List[str]:
     value = os.environ.get(name, '')
     return [item.strip() for item in value.split(',') if item.strip()]
@@ -156,6 +166,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'store.context_processors.cart_context',
                 'store.context_processors.categories_context',
+                'store.context_processors.notifications_context',
             ],
         },
     },
@@ -284,6 +295,19 @@ EMAIL_2FA_SHOW_DEBUG_CODE = env_bool(
     'EMAIL_2FA_SHOW_DEBUG_CODE',
     default=DEBUG and EMAIL_BACKEND.endswith('locmem.EmailBackend'),
 )
+
+# Gemini / OpenAI gerçek LLM destek entegrasyonu. API anahtarları ortam değişkeninde kalmalı.
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_SUPPORT_MODEL = os.environ.get('GEMINI_SUPPORT_MODEL', 'gemini-3.5-flash')
+GEMINI_SUPPORT_TIMEOUT = env_int('GEMINI_SUPPORT_TIMEOUT', default=12)
+GEMINI_SUPPORT_MAX_OUTPUT_TOKENS = env_int('GEMINI_SUPPORT_MAX_OUTPUT_TOKENS', default=420)
+GEMINI_SUPPORT_TEMPERATURE = env_float('GEMINI_SUPPORT_TEMPERATURE', default=0.35)
+GEMINI_INTERACTIONS_URL = os.environ.get('GEMINI_INTERACTIONS_URL', 'https://generativelanguage.googleapis.com/v1beta/interactions')
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+OPENAI_SUPPORT_MODEL = os.environ.get('OPENAI_SUPPORT_MODEL', 'gpt-4.1-mini')
+OPENAI_SUPPORT_TIMEOUT = env_int('OPENAI_SUPPORT_TIMEOUT', default=12)
+OPENAI_SUPPORT_MAX_OUTPUT_TOKENS = env_int('OPENAI_SUPPORT_MAX_OUTPUT_TOKENS', default=420)
+OPENAI_RESPONSES_URL = os.environ.get('OPENAI_RESPONSES_URL', 'https://api.openai.com/v1/responses')
 
 
 # Crispy Forms

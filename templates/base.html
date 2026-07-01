@@ -50,6 +50,19 @@
                         </a>
                     </li>
                     {% endif %}
+
+                    {% if user.is_authenticated %}
+                    <li class="nav-item me-3">
+                        <a class="nav-link position-relative" href="{% url 'store:notifications' %}" title="Bildirimler">
+                            <i class="bi bi-bell fs-5"></i>
+                            {% if unread_notification_count %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ unread_notification_count }}
+                            </span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    {% endif %}
                     
                     <li class="nav-item me-4">
                         <a class="nav-link position-relative cart-icon" href="{% url 'store:cart' %}">
@@ -74,6 +87,8 @@
                             <li><a class="dropdown-item" href="{% url 'accounts:profile' %}?tab=account"><i class="bi bi-person me-2"></i>Hesabım</a></li>
                             <li><a class="dropdown-item" href="{% url 'accounts:profile' %}?tab=orders"><i class="bi bi-box me-2"></i>Siparişlerim</a></li>
                             <li><a class="dropdown-item" href="{% url 'accounts:profile' %}?tab=favorites"><i class="bi bi-heart me-2"></i>Favorilerim</a></li>
+                            <li><a class="dropdown-item" href="{% url 'store:notifications' %}"><i class="bi bi-bell me-2"></i>Bildirimler</a></li>
+                            <li><a class="dropdown-item" href="{% url 'store:support_center' %}"><i class="bi bi-headset me-2"></i>AI Destek Merkezi</a></li>
                             <li><a class="dropdown-item" href="{% url 'store:compare' %}"><i class="bi bi-arrow-left-right me-2"></i>Karşılaştırma</a></li>
                             {% if not user.vendor_profile.is_approved %}
                             <li><hr class="dropdown-divider"></li>

@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 from vendors.models import AdPlacementRequest, SponsoredProductCampaign, Vendor
+from .ai_support import AISupportUnavailable, generate_external_support_reply
 from .models import (
     Cart,
     CartItem,
@@ -28,6 +29,7 @@ from .models import (
     HeroCampaign,
     HomeFeaturedCategory,
     HomeFeaturedProduct,
+    Notification,
     Order,
     OrderItem,
     OrderPhoneNotification,
@@ -40,8 +42,18 @@ from .models import (
     ShipmentEvent,
     ShippingCompany,
     SiteFeedback,
+    SupportTicket,
+    SupportTicketMessage,
 )
-from .forms import CheckoutForm, OrderServiceRequestForm, ProductQuestionForm, ProductReviewForm, SiteFeedbackForm
+from .forms import (
+    CheckoutForm,
+    OrderServiceRequestForm,
+    ProductQuestionForm,
+    ProductReviewForm,
+    SiteFeedbackForm,
+    SupportTicketForm,
+    SupportTicketMessageForm,
+)
 from .legal_info import LEGAL
 
 MONEY_QUANT = Decimal('0.01')
@@ -57,6 +69,83 @@ def notify_admin(subject, message):
         settings.DEFAULT_FROM_EMAIL,
         [recipient],
         fail_silently=True,
+    )
+
+
+def create_notification(recipient, title, message='', notification_type=Notification.NotificationType.SYSTEM, link_url='', actor=None):
+    if not recipient:
+        return None
+    return Notification.objects.create(
+        recipient=recipient,
+        actor=actor,
+        title=title,
+        message=message,
+        notification_type=notification_type,
+        link_url=link_url,
+    )
+
+
+def build_support_ai_response(ticket_type, subject, message, order=None):
+    text = f'{ticket_type} {subject} {message}'.lower()
+    if any(word in text for word in ['hasar', 'kırık', 'kirik', 'bozuk', 'çalışmıyor', 'calismiyor']):
+        suggestion = (
+            'Hasarlı ürün için paketin ve ürünün fotoğraflarını saklayın. '
+            'Destek ekibi iade/değişim sürecini hızlandırmak için sizden görsel kanıt isteyebilir.'
+        )
+    elif any(word in text for word in ['kargo', 'teslim', 'gecik', 'takip']):
+        suggestion = (
+            'Kargo gecikmelerinde önce takip numarası ve son istasyon kontrol edilir. '
+            'Talebinizde teslimat adresi ve ulaşılacak telefon güncelse süreç daha hızlı ilerler.'
+        )
+    elif ticket_type == SupportTicket.TicketType.RETURN or any(word in text for word in ['iade', 'geri gönder']):
+        suggestion = (
+            'İade talebi için ürünün kullanılmamış olması, aksesuar/fatura/kutu içeriğinin korunması ve sipariş durumunun uygun olması gerekir.'
+        )
+    elif ticket_type == SupportTicket.TicketType.CANCEL or any(word in text for word in ['iptal', 'vazgeç']):
+        suggestion = (
+            'İptal talepleri kargoya verilmeden önce daha hızlı sonuçlanır. Sipariş kargoya çıktıysa süreç iade adımına dönüşebilir.'
+        )
+    elif any(word in text for word in ['fatura', 'ödeme', 'odeme', 'taksit']):
+        suggestion = (
+            'Fatura/ödeme taleplerinde şirket adı, vergi/TCKN bilgisi ve sipariş numarası kontrol edilir.'
+        )
+    else:
+        suggestion = (
+            'Talebiniz alındı. Destek ekibi konuyu inceleyene kadar sipariş numarası, ürün adı ve beklediğiniz çözümü net yazmanız süreci hızlandırır.'
+        )
+
+    order_text = f' Sipariş #{order.id} ile ilişkilendirildi.' if order else ''
+    summary = f'{subject.strip()} - {message.strip()[:220]}'
+    return summary, f'{suggestion}{order_text}'
+
+
+def build_llm_support_response(ticket_type, subject, message, order=None, previous_messages=None):
+    summary = f'{subject.strip()} - {message.strip()[:220]}'
+    try:
+        response_text, provider_name = generate_external_support_reply(
+            ticket_type=ticket_type,
+            subject=subject,
+            message=message,
+            order=order,
+            previous_messages=previous_messages,
+        )
+        return summary, response_text, provider_name
+    except AISupportUnavailable:
+        _, fallback = build_support_ai_response(ticket_type, subject, message, order=order)
+        return summary, fallback, 'yerel fallback'
+
+
+def build_ai_source_message(provider_name):
+    return f'AI yanıt kaynağı: {provider_name}'
+
+
+def create_support_ticket_notification(ticket, title='Destek talebiniz alındı'):
+    create_notification(
+        recipient=ticket.user,
+        title=title,
+        message=f'#{ticket.id} numaralı destek talebiniz: {ticket.subject}',
+        notification_type=Notification.NotificationType.SUPPORT,
+        link_url=reverse('store:support_ticket_detail', args=[ticket.id]),
     )
 
 
@@ -80,6 +169,13 @@ def create_order_notifications(request, order):
         phone=order.phone,
         message=message,
         tracking_link=info_link,
+    )
+    create_notification(
+        recipient=order.user,
+        title=f'Siparişiniz alındı: #{order.id}',
+        message=f'{order.total_amount} TL tutarındaki siparişiniz başarıyla oluşturuldu.',
+        notification_type=Notification.NotificationType.ORDER,
+        link_url=reverse('store:order_success', args=[order.id]),
     )
     notify_admin(
         f'Yeni sipariş #{order.id}',
@@ -955,6 +1051,48 @@ def order_service_request_view(request, order_id):
             messages.info(request, 'Bu sipariş için aynı tipte açık bir talebiniz zaten var.')
             return redirect('store:order_success', order_id=order.id)
 
+        ticket_type = (
+            SupportTicket.TicketType.CANCEL
+            if request_type == OrderServiceRequest.RequestType.CANCEL
+            else SupportTicket.TicketType.RETURN
+        )
+        subject = f'{service_request.get_request_type_display()} - Sipariş #{order.id}'
+        ai_summary, ai_suggestion, ai_provider = build_llm_support_response(
+            ticket_type,
+            subject,
+            f'{service_request.reason}\n{service_request.description}',
+            order=order,
+        )
+        ticket = SupportTicket.objects.create(
+            user=request.user,
+            order=order,
+            service_request=service_request,
+            ticket_type=ticket_type,
+            subject=subject,
+            ai_summary=ai_summary,
+            ai_suggestion=ai_suggestion,
+            status=SupportTicket.Status.WAITING_SUPPORT,
+        )
+        SupportTicketMessage.objects.create(
+            ticket=ticket,
+            author=request.user,
+            sender_type=SupportTicketMessage.SenderType.CUSTOMER,
+            message=f'{service_request.reason}\n\n{service_request.description}'.strip(),
+        )
+        SupportTicketMessage.objects.create(
+            ticket=ticket,
+            sender_type=SupportTicketMessage.SenderType.AI,
+            message=ai_suggestion,
+            is_internal=False,
+        )
+        SupportTicketMessage.objects.create(
+            ticket=ticket,
+            sender_type=SupportTicketMessage.SenderType.SYSTEM,
+            message=build_ai_source_message(ai_provider),
+            is_internal=True,
+        )
+        create_support_ticket_notification(ticket)
+
         notify_admin(
             f'Yeni {service_request.get_request_type_display()} - Sipariş #{order.id}',
             (
@@ -970,6 +1108,151 @@ def order_service_request_view(request, order_id):
     else:
         messages.error(request, 'Talep oluşturulamadı. Lütfen bilgileri kontrol edin.')
     return redirect('store:order_success', order_id=order.id)
+
+
+@login_required
+def notification_center_view(request):
+    notifications = request.user.notifications.select_related('actor')[:80]
+    unread_count = request.user.notifications.filter(read_at__isnull=True).count()
+    return render(request, 'store/notifications.html', {
+        'notifications': notifications,
+        'unread_count': unread_count,
+    })
+
+
+@login_required
+@require_POST
+def mark_notification_read_view(request, notification_id):
+    notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
+    notification.mark_read()
+    if notification.link_url:
+        return redirect(notification.link_url)
+    return redirect('store:notifications')
+
+
+@login_required
+@require_POST
+def mark_all_notifications_read_view(request):
+    request.user.notifications.filter(read_at__isnull=True).update(read_at=timezone.now())
+    messages.success(request, 'Tüm bildirimler okundu olarak işaretlendi.')
+    return redirect('store:notifications')
+
+
+@login_required
+def support_center_view(request):
+    initial_order = None
+    order_id = request.GET.get('order')
+    if order_id:
+        initial_order = request.user.orders.filter(id=order_id).first()
+
+    if request.method == 'POST':
+        form = SupportTicketForm(request.POST, user=request.user)
+        if form.is_valid():
+            ticket = form.save(commit=False)
+            ticket.user = request.user
+            first_message = form.cleaned_data['first_message']
+            ai_summary, ai_suggestion, ai_provider = build_llm_support_response(
+                ticket.ticket_type,
+                ticket.subject,
+                first_message,
+                order=ticket.order,
+            )
+            ticket.ai_summary = ai_summary
+            ticket.ai_suggestion = ai_suggestion
+            ticket.status = SupportTicket.Status.WAITING_SUPPORT
+            ticket.save()
+            SupportTicketMessage.objects.create(
+                ticket=ticket,
+                author=request.user,
+                sender_type=SupportTicketMessage.SenderType.CUSTOMER,
+                message=first_message,
+            )
+            SupportTicketMessage.objects.create(
+                ticket=ticket,
+                sender_type=SupportTicketMessage.SenderType.AI,
+                message=ai_suggestion,
+            )
+            SupportTicketMessage.objects.create(
+                ticket=ticket,
+                sender_type=SupportTicketMessage.SenderType.SYSTEM,
+                message=build_ai_source_message(ai_provider),
+                is_internal=True,
+            )
+            create_support_ticket_notification(ticket)
+            notify_admin(
+                f'Yeni destek talebi #{ticket.id}',
+                (
+                    f'Konu: {ticket.subject}\n'
+                    f'Müşteri: {request.user.get_full_name() or request.user.username} <{request.user.email}>\n'
+                    f'Tip: {ticket.get_ticket_type_display()}\n\n'
+                    f'{first_message}'
+                ),
+            )
+            messages.success(request, 'Destek talebiniz oluşturuldu. AI destek ilk öneriyi sohbete ekledi.')
+            return redirect('store:support_ticket_detail', ticket_id=ticket.id)
+    else:
+        form = SupportTicketForm(user=request.user, initial={'order': initial_order})
+
+    tickets = request.user.support_tickets.select_related('order').prefetch_related('messages')[:40]
+    return render(request, 'store/support_center.html', {
+        'form': form,
+        'tickets': tickets,
+    })
+
+
+@login_required
+def support_ticket_detail_view(request, ticket_id):
+    ticket = get_object_or_404(
+        SupportTicket.objects.select_related('order', 'service_request').prefetch_related('messages'),
+        id=ticket_id,
+        user=request.user,
+    )
+    if request.method == 'POST':
+        form = SupportTicketMessageForm(request.POST)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.ticket = ticket
+            message.author = request.user
+            message.sender_type = SupportTicketMessage.SenderType.CUSTOMER
+            message.save()
+            ticket.status = SupportTicket.Status.WAITING_SUPPORT
+            ticket.save(update_fields=['status', 'updated_at'])
+
+            previous_messages = list(ticket.messages.filter(is_internal=False))
+            _, ai_suggestion, ai_provider = build_llm_support_response(
+                ticket.ticket_type,
+                ticket.subject,
+                message.message,
+                order=ticket.order,
+                previous_messages=previous_messages,
+            )
+            SupportTicketMessage.objects.create(
+                ticket=ticket,
+                sender_type=SupportTicketMessage.SenderType.AI,
+                message=ai_suggestion,
+            )
+            SupportTicketMessage.objects.create(
+                ticket=ticket,
+                sender_type=SupportTicketMessage.SenderType.SYSTEM,
+                message=build_ai_source_message(ai_provider),
+                is_internal=True,
+            )
+            create_notification(
+                recipient=request.user,
+                title='AI destek yeni öneri ekledi',
+                message=ticket.subject,
+                notification_type=Notification.NotificationType.SUPPORT,
+                link_url=reverse('store:support_ticket_detail', args=[ticket.id]),
+            )
+            messages.success(request, 'Mesajınız eklendi. AI destek önerisi güncellendi.')
+            return redirect('store:support_ticket_detail', ticket_id=ticket.id)
+    else:
+        form = SupportTicketMessageForm()
+
+    return render(request, 'store/support_ticket_detail.html', {
+        'ticket': ticket,
+        'form': form,
+    })
 
 
 def pdf_safe_text(value):

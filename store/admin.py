@@ -17,6 +17,7 @@ from .models import (
     HomeFeaturedCategory,
     HomeFeaturedProduct,
     InstallmentRate,
+    Notification,
     Order,
     OrderItem,
     OrderPhoneNotification,
@@ -30,6 +31,8 @@ from .models import (
     ShipmentEvent,
     ShippingCompany,
     SiteFeedback,
+    SupportTicket,
+    SupportTicketMessage,
 )
 
 @admin.register(Category)
@@ -307,6 +310,37 @@ class OrderServiceRequestAdmin(admin.ModelAdmin):
     search_fields = ['order__id', 'user__username', 'user__email', 'reason', 'description']
     autocomplete_fields = ['order', 'user']
     list_editable = ['status']
+
+
+class SupportTicketMessageInline(admin.TabularInline):
+    model = SupportTicketMessage
+    extra = 0
+    readonly_fields = ['created_at']
+    fields = ['sender_type', 'author', 'message', 'is_internal', 'created_at']
+
+
+@admin.register(SupportTicket)
+class SupportTicketAdmin(admin.ModelAdmin):
+    list_display = ['id', 'subject', 'user', 'ticket_type', 'status', 'order', 'updated_at']
+    list_filter = ['ticket_type', 'status', 'created_at', 'updated_at']
+    search_fields = ['id', 'subject', 'user__username', 'user__email', 'ai_summary', 'ai_suggestion']
+    list_editable = ['status']
+    autocomplete_fields = ['user', 'order', 'service_request']
+    readonly_fields = ['ai_summary', 'ai_suggestion', 'created_at', 'updated_at']
+    inlines = [SupportTicketMessageInline]
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['title', 'recipient', 'notification_type', 'is_read_admin', 'created_at']
+    list_filter = ['notification_type', 'read_at', 'created_at']
+    search_fields = ['title', 'message', 'recipient__username', 'recipient__email']
+    autocomplete_fields = ['recipient', 'actor']
+    readonly_fields = ['created_at', 'read_at']
+
+    @admin.display(description='Okundu', boolean=True)
+    def is_read_admin(self, obj):
+        return obj.is_read
 
 
 @admin.register(Coupon)

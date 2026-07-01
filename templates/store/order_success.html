@@ -104,7 +104,15 @@
         </div>
 
         <div class="bg-light rounded-3 p-4 text-start mb-4">
-            <h5 class="fw-bold mb-3"><i class="bi bi-arrow-counterclockwise me-2 text-primary"></i>İade / İptal Talebi</h5>
+            <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1"><i class="bi bi-arrow-counterclockwise me-2 text-primary"></i>İade / İptal Talebi</h5>
+                    <p class="text-muted small mb-0">Bu form otomatik olarak destek sohbeti de oluşturur.</p>
+                </div>
+                <a href="{% url 'store:support_center' %}?order={{ order.id }}" class="btn btn-sm btn-success rounded-pill px-3">
+                    <i class="bi bi-stars me-1"></i> AI Destek Aç
+                </a>
+            </div>
             {% if order.service_requests.all %}
                 <div class="d-flex flex-column gap-2 mb-3">
                     {% for request_item in order.service_requests.all %}
@@ -147,6 +155,7 @@
         
         <div>
             <a href="{% url 'accounts:profile' %}" class="btn btn-outline-primary rounded-pill px-4 me-2">Siparişlerimi Gör</a>
+            <a href="{% url 'store:support_center' %}" class="btn btn-outline-success rounded-pill px-4 me-2">Destek Merkezi</a>
             <a href="{% url 'store:home' %}" class="btn btn-primary rounded-pill px-4">Alışverişe Devam Et</a>
         </div>
     </div>
